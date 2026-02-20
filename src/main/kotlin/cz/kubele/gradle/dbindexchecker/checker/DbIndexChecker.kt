@@ -7,7 +7,7 @@ import cz.kubele.gradle.dbindexchecker.model.QueryColumn
 /**
  * Compares query columns against indexed columns and reports missing indexes.
  */
-object IndexChecker {
+object DbIndexChecker {
 
     fun findMissingIndexes(
         serviceName: String,

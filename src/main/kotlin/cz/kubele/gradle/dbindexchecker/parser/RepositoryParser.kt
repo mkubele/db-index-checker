@@ -445,25 +445,46 @@ object RepositoryParser {
         val results = mutableListOf<QueryColumn>()
         val normalized = query.replace(Regex("\\s+"), " ").trim()
 
-        // Extract column references from WHERE clauses
-        // Match patterns: column_name = :param, column_name IS NULL, column_name IN (...), etc.
-        val whereIndex = normalized.indexOfFirst(
-            "WHERE", "where"
+        // Build alias -> table map from FROM and JOIN clauses
+        val aliasToTable = mutableMapOf<String, String>()
+        val tableAliasPattern = Regex(
+            """(?:FROM|JOIN)\s+(\w+)\s+(\w+)""",
+            RegexOption.IGNORE_CASE
         )
+        tableAliasPattern.findAll(normalized).forEach { match ->
+            val table = match.groupValues[1].lowercase()
+            val alias = match.groupValues[2].lowercase()
+            if (alias !in setOf("on", "where", "inner", "left", "right", "outer", "cross", "natural", "join", "set")) {
+                aliasToTable[alias] = table
+            }
+        }
+        val entityTable = tableMapping.tableName.lowercase()
+        val entityAliases = aliasToTable.filterValues { it == entityTable }.keys
+        val isMultiTable = aliasToTable.size > 1
+
+        // Helper: check if a qualified column reference belongs to the entity table
+        fun isEntityColumn(alias: String?, column: String): Boolean {
+            if (alias != null) return alias.lowercase() in entityAliases
+            // Unqualified column: only report in single-table queries
+            return !isMultiTable
+        }
+
+        // Extract column references from WHERE clauses
+        val whereIndex = normalized.indexOfFirst("WHERE", "where")
         if (whereIndex < 0) return results
 
         val afterWhere = normalized.substring(whereIndex)
 
-        // Match column names that appear in conditions
-        // Pattern: word followed by operator (=, <, >, IS, IN, BETWEEN, LIKE, etc.) or word preceded by AND/OR/WHERE
+        // Match column names that appear in conditions, capturing optional alias
         val columnPattern = Regex(
-            """(?:WHERE|AND|OR)\s+(?:(?:\w+\.)?(\w+))\s*(?:=|<>|!=|<=|>=|<|>|IS\s|IN\s|IN\(|BETWEEN\s|LIKE\s|NOT\s)""",
+            """(?:WHERE|AND|OR)\s+(?:(\w+)\.)?(\w+)\s*(?:=|<>|!=|<=|>=|<|>|IS\s|IN\s|IN\(|BETWEEN\s|LIKE\s|NOT\s)""",
             RegexOption.IGNORE_CASE
         )
         columnPattern.findAll(afterWhere).forEach { match ->
-            val columnName = match.groupValues[1].lowercase()
-            // Skip SQL keywords and parameter references
-            if (columnName !in setOf("null", "not", "true", "false", "and", "or", "exists", "select", "case", "when", "then", "else", "end")) {
+            val alias = match.groupValues[1].ifEmpty { null }
+            val columnName = match.groupValues[2].lowercase()
+            if (columnName !in setOf("null", "not", "true", "false", "and", "or", "exists", "select", "case", "when", "then", "else", "end")
+                && isEntityColumn(alias, columnName)) {
                 results.add(
                     QueryColumn(
                         tableName = tableMapping.tableName,
@@ -477,16 +498,18 @@ object RepositoryParser {
             }
         }
 
-        // Also extract columns from JOIN ON conditions
+        // Also extract columns from JOIN ON conditions, capturing aliases
         val joinOnPattern = Regex(
-            """(?:ON)\s+(?:(?:\w+\.)?(\w+))\s*=\s*(?:(?:\w+\.)?(\w+))""",
+            """(?:ON)\s+(?:(\w+)\.)?(\w+)\s*=\s*(?:(\w+)\.)?(\w+)""",
             RegexOption.IGNORE_CASE
         )
         joinOnPattern.findAll(normalized).forEach { match ->
-            val col1 = match.groupValues[1].lowercase()
-            val col2 = match.groupValues[2].lowercase()
-            for (col in listOf(col1, col2)) {
-                if (col !in setOf("id", "null", "true", "false")) {
+            val alias1 = match.groupValues[1].ifEmpty { null }
+            val col1 = match.groupValues[2].lowercase()
+            val alias2 = match.groupValues[3].ifEmpty { null }
+            val col2 = match.groupValues[4].lowercase()
+            for ((alias, col) in listOf(alias1 to col1, alias2 to col2)) {
+                if (col !in setOf("id", "null", "true", "false") && isEntityColumn(alias, col)) {
                     results.add(
                         QueryColumn(
                             tableName = tableMapping.tableName,
@@ -506,10 +529,11 @@ object RepositoryParser {
         val orderByMatch = orderByRegex.find(normalized)
         if (orderByMatch != null) {
             val orderCols = orderByMatch.groupValues[1]
-            val colNameRegex = Regex("""(?:\w+\.)?(\w+)\s*(?:ASC|DESC|,)?""", RegexOption.IGNORE_CASE)
+            val colNameRegex = Regex("""(?:(\w+)\.)?(\w+)\s*(?:ASC|DESC|,)?""", RegexOption.IGNORE_CASE)
             colNameRegex.findAll(orderCols).forEach { match ->
-                val col = match.groupValues[1].lowercase()
-                if (col !in setOf("asc", "desc", "nulls", "first", "last")) {
+                val alias = match.groupValues[1].ifEmpty { null }
+                val col = match.groupValues[2].lowercase()
+                if (col !in setOf("asc", "desc", "nulls", "first", "last") && isEntityColumn(alias, col)) {
                     results.add(
                         QueryColumn(
                             tableName = tableMapping.tableName,

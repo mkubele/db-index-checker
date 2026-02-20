@@ -21,7 +21,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
-abstract class IndexCheckerTask : DefaultTask() {
+abstract class DbIndexCheckerTask : DefaultTask() {
 
     @get:Input
     abstract val failOnMissing: Property<Boolean>

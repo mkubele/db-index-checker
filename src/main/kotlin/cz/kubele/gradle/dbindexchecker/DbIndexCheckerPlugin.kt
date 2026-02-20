@@ -3,11 +3,11 @@ package cz.kubele.gradle.dbindexchecker
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
-class IndexCheckerPlugin : Plugin<Project> {
+class DbIndexCheckerPlugin : Plugin<Project> {
     override fun apply(project: Project) {
-        val extension = project.extensions.create("indexChecker", IndexCheckerExtension::class.java)
+        val extension = project.extensions.create("dbIndexChecker", DbIndexCheckerExtension::class.java)
 
-        project.tasks.register("indexCheck", IndexCheckerTask::class.java) { task ->
+        project.tasks.register("dbIndexCheck", DbIndexCheckerTask::class.java) { task ->
             task.group = "verification"
             task.description = "Check that all columns used in repository queries have database indexes"
             task.failOnMissing.set(extension.failOnMissing)

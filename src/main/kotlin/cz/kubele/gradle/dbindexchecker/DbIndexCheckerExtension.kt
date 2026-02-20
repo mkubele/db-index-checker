@@ -3,7 +3,7 @@ package cz.kubele.gradle.dbindexchecker
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
-abstract class IndexCheckerExtension {
+abstract class DbIndexCheckerExtension {
 
     /** Fail the build if missing indexes are found. Default: false (warn only). */
     abstract val failOnMissing: Property<Boolean>

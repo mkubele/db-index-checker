@@ -2,6 +2,7 @@ package cz.kubele.gradle.dbindexchecker
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import java.io.File
 
 class DbIndexCheckerPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -23,6 +24,29 @@ class DbIndexCheckerPlugin : Plugin<Project> {
             task.rootProjectDir.set(project.rootDir)
             task.htmlReportFile.set(project.layout.buildDirectory.file("reports/index-check/missing-indexes.html"))
             task.jsonReportFile.set(project.layout.buildDirectory.file("reports/index-check/missing-indexes.json"))
+
+            task.kotlinSourceFiles.from(
+                project.fileTree(project.rootDir) {
+                    it.include("**/src/main/kotlin/**/*.kt")
+                    it.exclude("**/build/**", "**/.gradle/**")
+                }
+            )
+            task.liquibaseFiles.from(
+                project.provider {
+                    val lbPath = extension.liquibaseRelativePath.get()
+                    project.fileTree(project.rootDir) {
+                        it.include("**/$lbPath/**")
+                        it.exclude("**/build/**", "**/.gradle/**")
+                    }
+                }
+            )
+            task.baselineInputFiles.from(
+                project.provider {
+                    val path = extension.baselineFilePath.get().trim()
+                    val file = if (File(path).isAbsolute) File(path) else File(project.rootDir, path)
+                    if (file.exists()) project.files(file) else project.files()
+                }
+            )
         }
     }
 }

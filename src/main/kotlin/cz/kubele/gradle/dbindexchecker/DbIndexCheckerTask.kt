@@ -11,12 +11,16 @@ import cz.kubele.gradle.dbindexchecker.parser.RepositoryParser
 import cz.kubele.gradle.dbindexchecker.report.ReportGenerator
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -24,6 +28,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import java.io.File
 
+@CacheableTask
 abstract class DbIndexCheckerTask : DefaultTask() {
 
     @get:Input
@@ -56,9 +61,22 @@ abstract class DbIndexCheckerTask : DefaultTask() {
     @get:Input
     abstract val liquibaseRelativePath: Property<String>
 
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:Internal
     abstract val rootProjectDir: DirectoryProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:IgnoreEmptyDirectories
+    abstract val kotlinSourceFiles: ConfigurableFileCollection
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    @get:IgnoreEmptyDirectories
+    abstract val liquibaseFiles: ConfigurableFileCollection
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val baselineInputFiles: ConfigurableFileCollection
 
     @get:OutputFile
     abstract val htmlReportFile: RegularFileProperty
@@ -71,6 +89,7 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 
     init {
         writeBaseline.convention(false)
+        outputs.cacheIf { !writeBaseline.get() }
     }
 
     @Option(option = "write-baseline", description = "Write current missing indexes into baseline JSON and exit without failing")

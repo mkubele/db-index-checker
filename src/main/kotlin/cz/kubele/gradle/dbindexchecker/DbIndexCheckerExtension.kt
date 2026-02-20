@@ -23,6 +23,9 @@ abstract class DbIndexCheckerExtension {
     /** Column names to always exclude (e.g., primary keys). */
     abstract val excludeColumns: ListProperty<String>
 
+    /** Per-finding exclusions as "table.column" pairs (e.g., "users.status"). */
+    abstract val excludeFindings: ListProperty<String>
+
     /**
      * Subproject/module names to scan (monorepo mode).
      * Empty = auto-discover subprojects that have entity, repository, and Liquibase directories.
@@ -56,6 +59,7 @@ abstract class DbIndexCheckerExtension {
         baselineFilePath.convention("db-index-checker-baseline.json")
         excludeTables.convention(listOf("databasechangelog", "databasechangeloglock"))
         excludeColumns.convention(listOf("id"))
+        excludeFindings.convention(emptyList())
         serviceNames.convention(emptyList())
         entityDirNames.convention(listOf("entity"))
         repositoryDirNames.convention(listOf("dao", "repository"))

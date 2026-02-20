@@ -17,6 +17,7 @@ class DbIndexCheckerPlugin : Plugin<Project> {
             task.baselineFilePath.set(extension.baselineFilePath)
             task.excludeTables.set(extension.excludeTables)
             task.excludeColumns.set(extension.excludeColumns)
+            task.excludeFindings.set(extension.excludeFindings)
             task.serviceNames.set(extension.serviceNames)
             task.entityDirNames.set(extension.entityDirNames)
             task.repositoryDirNames.set(extension.repositoryDirNames)
@@ -33,9 +34,8 @@ class DbIndexCheckerPlugin : Plugin<Project> {
             )
             task.liquibaseFiles.from(
                 project.provider {
-                    val lbPath = extension.liquibaseRelativePath.get()
                     project.fileTree(project.rootDir) {
-                        it.include("**/$lbPath/**")
+                        it.include("**/${extension.liquibaseRelativePath.get()}/**")
                         it.exclude("**/build/**", "**/.gradle/**")
                     }
                 }
@@ -43,7 +43,7 @@ class DbIndexCheckerPlugin : Plugin<Project> {
             task.baselineInputFiles.from(
                 project.provider {
                     val path = extension.baselineFilePath.get().trim()
-                    val file = if (File(path).isAbsolute) File(path) else File(project.rootDir, path)
+                    val file = File(path).let { if (it.isAbsolute) it else File(project.rootDir, path) }
                     if (file.exists()) project.files(file) else project.files()
                 }
             )

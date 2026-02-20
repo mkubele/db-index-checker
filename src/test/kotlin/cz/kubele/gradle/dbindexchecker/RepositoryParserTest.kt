@@ -558,6 +558,143 @@ class RepositoryParserTest {
         }
     }
 
+    // === @SuppressIndexCheck Tests ===
+
+    @Test
+    fun `SuppressIndexCheck suppresses all columns from derived query`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck
+                    fun findByNameAndEmail(name: String, email: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertTrue(result.isEmpty())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck with specific columns suppresses only those columns`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck("name")
+                    fun findByNameAndEmail(name: String, email: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("email_address", result[0].columnName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck with multiple specific columns`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck("name", "email_address")
+                    fun findByNameAndEmailAndActive(name: String, email: String, active: Boolean): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("active", result[0].columnName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck only affects the next method`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck
+                    fun findByName(name: String): List<User>
+
+                    fun findByEmail(email: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("email_address", result[0].columnName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck works with JPQL query`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck
+                    @Query("SELECT u FROM User u WHERE u.name = :name")
+                    fun findUserByName(name: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertTrue(result.isEmpty())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck works with native SQL query`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck
+                    @Query("SELECT * FROM users WHERE name = :name", nativeQuery = true)
+                    fun findUserByName(name: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertTrue(result.isEmpty())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `SuppressIndexCheck with specific columns works with native SQL query`() {
+        val dir = createTempDir("repo-test")
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    // @SuppressIndexCheck("name")
+                    @Query("SELECT * FROM users WHERE name = :name AND active = true", nativeQuery = true)
+                    fun findActiveUserByName(name: String): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("active", result[0].columnName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     private fun createTempDir(prefix: String): File {
         return kotlin.io.path.createTempDirectory(prefix).toFile()
     }

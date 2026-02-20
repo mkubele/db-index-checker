@@ -50,6 +50,9 @@ abstract class DbIndexCheckerTask : DefaultTask() {
     abstract val excludeColumns: ListProperty<String>
 
     @get:Input
+    abstract val excludeFindings: ListProperty<String>
+
+    @get:Input
     abstract val serviceNames: ListProperty<String>
 
     @get:Input
@@ -112,14 +115,14 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 
         logger.lifecycle("Index Checker: Scanning ${resolvedServiceNames.size} modules...")
 
-        val allMissing = mutableListOf<MissingIndex>()
-        for (moduleName in resolvedServiceNames) {
+        val allMissing = resolvedServiceNames.flatMap { moduleName ->
             val moduleDir = File(rootDir, moduleName)
             if (!moduleDir.exists()) {
                 logger.warn("Module directory not found: $moduleName")
-                continue
+                emptyList()
+            } else {
+                checkModule(moduleName, moduleDir)
             }
-            allMissing.addAll(checkModule(moduleName, moduleDir))
         }
 
         finish(allMissing, rootDir)
@@ -178,8 +181,9 @@ abstract class DbIndexCheckerTask : DefaultTask() {
         }
 
         // 1. Parse entities
-        val entityMappings = mutableMapOf<String, TableMapping>()
-        entityDirs.forEach { dir -> entityMappings.putAll(EntityParser.parseEntities(dir)) }
+        val entityMappings = entityDirs.fold(emptyMap<String, TableMapping>()) { acc, dir ->
+            acc + EntityParser.parseEntities(dir)
+        }
 
         if (entityMappings.isEmpty()) {
             logger.info("Skipping $moduleName (no entities found)")
@@ -204,7 +208,8 @@ abstract class DbIndexCheckerTask : DefaultTask() {
             queryColumns = queryColumns,
             indexedColumns = indexedColumns,
             excludeTables = excludeTables.get().toSet(),
-            excludeColumns = excludeColumns.get().toSet()
+            excludeColumns = excludeColumns.get().toSet(),
+            excludeFindings = excludeFindings.get().toSet()
         )
     }
 

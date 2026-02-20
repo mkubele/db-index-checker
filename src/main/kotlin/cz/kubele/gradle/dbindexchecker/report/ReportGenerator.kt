@@ -9,6 +9,9 @@ import java.io.File
 
 object ReportGenerator {
 
+    private val MISSING_COMPARATOR = compareBy<MissingIndex>({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() })
+    private val ISSUE_COMPARATOR = compareBy<BaselineIssue>({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() })
+
     fun generate(
         comparison: BaselineComparison,
         logger: Logger,
@@ -36,10 +39,10 @@ object ReportGenerator {
         logger.lifecycle("  New: ${comparison.newIssues.size}, Existing: ${comparison.existingIssues.size}, Resolved: ${comparison.resolvedIssues.size}")
         logger.lifecycle("")
 
-        printIssueSection("New missing indexes", comparison.newIssues, logger, true)
+        printIssueSection("New missing indexes", comparison.newIssues, logger, asWarning = true)
 
         if (warnOnExistingMissing) {
-            printIssueSection("Existing baseline issues", comparison.existingIssues, logger, true)
+            printIssueSection("Existing baseline issues", comparison.existingIssues, logger, asWarning = true)
         } else if (comparison.existingIssues.isNotEmpty()) {
             logger.lifecycle("  Existing baseline issues: ${comparison.existingIssues.size} (suppressed)")
             logger.lifecycle("")
@@ -113,9 +116,9 @@ object ReportGenerator {
                 appendLine("<p class=\"success\">All queried columns have indexes!</p>")
             } else {
                 appendLine("<p class=\"summary\">Total <strong>${comparison.current.size}</strong> missing indexes | New: <strong>${comparison.newIssues.size}</strong> | Existing: <strong>${comparison.existingIssues.size}</strong> | Resolved: <strong>${comparison.resolvedIssues.size}</strong></p>")
-                appendIssueTable("New missing indexes", comparison.newIssues, this)
-                appendIssueTable("Existing baseline issues", comparison.existingIssues, this)
-                appendResolvedTable("Resolved since baseline", comparison.resolvedIssues, this)
+                appendIssueTable("New missing indexes", comparison.newIssues)
+                appendIssueTable("Existing baseline issues", comparison.existingIssues)
+                appendResolvedTable("Resolved since baseline", comparison.resolvedIssues)
             }
 
             appendLine("<script>")
@@ -126,46 +129,46 @@ object ReportGenerator {
         })
     }
 
-    private fun appendIssueTable(title: String, issues: List<MissingIndex>, out: StringBuilder) {
+    private fun StringBuilder.appendIssueTable(title: String, issues: List<MissingIndex>) {
         if (issues.isEmpty()) return
 
-        out.appendLine("<h2>$title</h2>")
-        out.appendLine("<table>")
-        out.appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th><th>Query</th><th>Source</th></tr></thead>")
-        out.appendLine("<tbody>")
+        appendLine("<h2>$title</h2>")
+        appendLine("<table>")
+        appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th><th>Query</th><th>Source</th></tr></thead>")
+        appendLine("<tbody>")
 
-        for (issue in issues.sortedWith(compareBy({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() }))) {
-            out.appendLine("<tr>")
-            out.appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
-            out.appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
-            out.appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
-            out.appendLine("  <td>${escapeHtml(formatQueryDescription(issue))}</td>")
-            out.appendLine("  <td><a href=\"#\" onclick=\"openInIde('${escapeJs(issue.repositoryFile)}', ${issue.lineNumber}); return false;\">${escapeHtml(shortPath(issue.repositoryFile))}:${issue.lineNumber}</a></td>")
-            out.appendLine("</tr>")
+        for (issue in issues.sortedWith(MISSING_COMPARATOR)) {
+            appendLine("<tr>")
+            appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
+            appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
+            appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
+            appendLine("  <td>${escapeHtml(formatQueryDescription(issue))}</td>")
+            appendLine("  <td><a href=\"#\" onclick=\"openInIde('${escapeJs(issue.repositoryFile)}', ${issue.lineNumber}); return false;\">${escapeHtml(shortPath(issue.repositoryFile))}:${issue.lineNumber}</a></td>")
+            appendLine("</tr>")
         }
 
-        out.appendLine("</tbody>")
-        out.appendLine("</table>")
+        appendLine("</tbody>")
+        appendLine("</table>")
     }
 
-    private fun appendResolvedTable(title: String, issues: List<BaselineIssue>, out: StringBuilder) {
+    private fun StringBuilder.appendResolvedTable(title: String, issues: List<BaselineIssue>) {
         if (issues.isEmpty()) return
 
-        out.appendLine("<h2>$title</h2>")
-        out.appendLine("<table>")
-        out.appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th></tr></thead>")
-        out.appendLine("<tbody>")
+        appendLine("<h2>$title</h2>")
+        appendLine("<table>")
+        appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th></tr></thead>")
+        appendLine("<tbody>")
 
-        for (issue in issues.sortedWith(compareBy({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() }))) {
-            out.appendLine("<tr>")
-            out.appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
-            out.appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
-            out.appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
-            out.appendLine("</tr>")
+        for (issue in issues.sortedWith(ISSUE_COMPARATOR)) {
+            appendLine("<tr>")
+            appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
+            appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
+            appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
+            appendLine("</tr>")
         }
 
-        out.appendLine("</tbody>")
-        out.appendLine("</table>")
+        appendLine("</tbody>")
+        appendLine("</table>")
     }
 
     private fun writeJson(comparison: BaselineComparison, file: File) {
@@ -180,12 +183,12 @@ object ReportGenerator {
             appendLine("  \"issues\": {")
             appendLine("    \"new\": [")
             comparison.newIssues.forEachIndexed { i, issue ->
-                appendMissingIssue(issue, i < comparison.newIssues.size - 1, this)
+                appendMissingIssue(issue, i < comparison.newIssues.size - 1)
             }
             appendLine("    ],")
             appendLine("    \"existing\": [")
             comparison.existingIssues.forEachIndexed { i, issue ->
-                appendMissingIssue(issue, i < comparison.existingIssues.size - 1, this)
+                appendMissingIssue(issue, i < comparison.existingIssues.size - 1)
             }
             appendLine("    ],")
             appendLine("    \"resolved\": [")
@@ -197,32 +200,30 @@ object ReportGenerator {
             appendLine("  },")
             appendLine("  \"allCurrent\": [")
             comparison.current.forEachIndexed { i, issue ->
-                appendMissingIssue(issue, i < comparison.current.size - 1, this)
+                appendMissingIssue(issue, i < comparison.current.size - 1)
             }
             appendLine("  ]")
             appendLine("}")
         })
     }
 
-    private fun appendMissingIssue(issue: MissingIndex, withComma: Boolean, out: StringBuilder) {
+    private fun StringBuilder.appendMissingIssue(issue: MissingIndex, withComma: Boolean) {
         val comma = if (withComma) "," else ""
-        out.appendLine("      {")
-        out.appendLine("        \"service\": ${jsonStr(issue.serviceName)},")
-        out.appendLine("        \"table\": ${jsonStr(issue.tableName)},")
-        out.appendLine("        \"column\": ${jsonStr(issue.columnName)},")
-        out.appendLine("        \"queryType\": ${jsonStr(issue.queryType.name)},")
-        out.appendLine("        \"querySource\": ${jsonStr(issue.querySource)},")
-        out.appendLine("        \"file\": ${jsonStr(issue.repositoryFile)},")
-        out.appendLine("        \"line\": ${issue.lineNumber}")
-        out.appendLine("      }$comma")
+        appendLine("      {")
+        appendLine("        \"service\": ${jsonStr(issue.serviceName)},")
+        appendLine("        \"table\": ${jsonStr(issue.tableName)},")
+        appendLine("        \"column\": ${jsonStr(issue.columnName)},")
+        appendLine("        \"queryType\": ${jsonStr(issue.queryType.name)},")
+        appendLine("        \"querySource\": ${jsonStr(issue.querySource)},")
+        appendLine("        \"file\": ${jsonStr(issue.repositoryFile)},")
+        appendLine("        \"line\": ${issue.lineNumber}")
+        appendLine("      }$comma")
     }
 
-    private fun formatQueryDescription(mi: MissingIndex): String {
-        return when (mi.queryType) {
-            QueryType.DERIVED_QUERY -> "query '${mi.querySource}'"
-            QueryType.JPQL -> "JPQL query"
-            QueryType.NATIVE_SQL -> "native SQL query"
-        }
+    private fun formatQueryDescription(mi: MissingIndex): String = when (mi.queryType) {
+        QueryType.DERIVED_QUERY -> "query '${mi.querySource}'"
+        QueryType.JPQL -> "JPQL query"
+        QueryType.NATIVE_SQL -> "native SQL query"
     }
 
     private fun shortPath(path: String): String {

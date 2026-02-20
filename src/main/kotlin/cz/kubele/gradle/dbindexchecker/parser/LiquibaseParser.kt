@@ -14,7 +14,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 object LiquibaseParser {
 
-    private val dbFactory: DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
+    private val dbFactory = DocumentBuilderFactory.newInstance().apply {
         isNamespaceAware = true
     }
 
@@ -31,10 +31,10 @@ object LiquibaseParser {
         val changelogFile = liquibaseDir.resolve("changelog.xml")
         if (!changelogFile.exists()) return emptyList()
 
-        val results = mutableListOf<IndexedColumn>()
-        val visited = mutableSetOf<String>()
-        parseChangelogFile(changelogFile, results, visited)
-        return results
+        return buildList {
+            val visited = mutableSetOf<String>()
+            parseChangelogFile(changelogFile, this, visited)
+        }
     }
 
     private fun parseChangelogFile(
@@ -43,32 +43,22 @@ object LiquibaseParser {
         visited: MutableSet<String>
     ) {
         val canonicalPath = file.canonicalPath
-        if (canonicalPath in visited) return
-        visited.add(canonicalPath)
-
+        if (!visited.add(canonicalPath)) return
         if (!file.exists()) return
 
         val doc = try {
-            val builder = dbFactory.newDocumentBuilder()
-            builder.parse(file)
+            dbFactory.newDocumentBuilder().parse(file)
         } catch (_: Exception) {
             return
         }
 
-        val relativePath = file.name
         val parentDir = file.parentFile
 
-        // Follow <include> references
+        // Follow <include> references — relativeToChangelogFile always resolves from parent
         forEachElement(doc, "include") { includeElem ->
             val includedFilePath = includeElem.getAttribute("file")
             if (includedFilePath.isNotBlank()) {
-                val relativeToChangelog = includeElem.getAttribute("relativeToChangelogFile")
-                val resolvedFile = if (relativeToChangelog == "true") {
-                    parentDir.resolve(includedFilePath)
-                } else {
-                    parentDir.resolve(includedFilePath)
-                }
-                parseChangelogFile(resolvedFile, results, visited)
+                parseChangelogFile(parentDir.resolve(includedFilePath), results, visited)
             }
         }
 
@@ -96,19 +86,16 @@ object LiquibaseParser {
             val indexName = elem.getAttribute("indexName")
             val isUnique = elem.getAttribute("unique") == "true"
 
-            val columns = getChildElements(elem, "column")
-            columns.forEachIndexed { position, colElem ->
+            elem.childElements("column").forEachIndexed { position, colElem ->
                 val columnName = colElem.getAttribute("name")
                 if (tableName.isNotBlank() && columnName.isNotBlank()) {
-                    results.add(
-                        IndexedColumn(
-                            tableName = tableName,
-                            columnName = columnName,
-                            indexName = indexName,
-                            filePath = filePath,
-                            isUnique = isUnique,
-                            compositePosition = position
-                        )
+                    results += IndexedColumn(
+                        tableName = tableName,
+                        columnName = columnName,
+                        indexName = indexName,
+                        filePath = filePath,
+                        isUnique = isUnique,
+                        compositePosition = position
                     )
                 }
             }
@@ -124,19 +111,19 @@ object LiquibaseParser {
             val constraintName = elem.getAttribute("constraintName").ifBlank {
                 elem.getAttribute("columnNames").replace(", ", "_") + "_uq"
             }
-            val columnNames = elem.getAttribute("columnNames")
 
-            columnNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            elem.getAttribute("columnNames")
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
                 .forEachIndexed { position, colName ->
-                    results.add(
-                        IndexedColumn(
-                            tableName = tableName,
-                            columnName = colName,
-                            indexName = constraintName,
-                            filePath = filePath,
-                            isUnique = true,
-                            compositePosition = position
-                        )
+                    results += IndexedColumn(
+                        tableName = tableName,
+                        columnName = colName,
+                        indexName = constraintName,
+                        filePath = filePath,
+                        isUnique = true,
+                        compositePosition = position
                     )
                 }
         }
@@ -148,8 +135,7 @@ object LiquibaseParser {
      */
     private fun parseSqlElements(doc: Document, filePath: String, results: MutableList<IndexedColumn>) {
         forEachElement(doc, "sql") { elem ->
-            // Skip <sql> elements inside <rollback>
-            if (isInsideRollback(elem)) return@forEachElement
+            if (elem.isInsideRollback()) return@forEachElement
 
             val sqlText = elem.textContent ?: return@forEachElement
 
@@ -166,12 +152,6 @@ object LiquibaseParser {
                 }.filter { it.isNotBlank() }
 
                 columns.forEachIndexed { position, colName ->
-                    val partial = sqlText.substringAfter(match.value).trimStart().let {
-                        it.startsWith("WHERE", ignoreCase = true) ||
-                                it.startsWith("INCLUDE", ignoreCase = true) &&
-                                sqlText.contains(Regex("""\bWHERE\b""", RegexOption.IGNORE_CASE))
-                    }
-
                     // Check if the whole SQL after the matched CREATE INDEX has a WHERE clause
                     val fullRemaining = sqlText.substring(match.range.last + 1)
                     val nextStatementStart = fullRemaining.indexOf(';')
@@ -182,16 +162,14 @@ object LiquibaseParser {
                     }
                     val isPartial = statementRemainder.contains(Regex("""\bWHERE\b""", RegexOption.IGNORE_CASE))
 
-                    results.add(
-                        IndexedColumn(
-                            tableName = tableName,
-                            columnName = colName,
-                            indexName = indexName,
-                            filePath = filePath,
-                            isUnique = isUnique,
-                            isPartial = isPartial,
-                            compositePosition = position
-                        )
+                    results += IndexedColumn(
+                        tableName = tableName,
+                        columnName = colName,
+                        indexName = indexName,
+                        filePath = filePath,
+                        isUnique = isUnique,
+                        isPartial = isPartial,
+                        compositePosition = position
                     )
                 }
             }
@@ -199,34 +177,27 @@ object LiquibaseParser {
     }
 
     /**
-     * Pattern E: <createTable> with inline primaryKey constraint, or
-     * <constraints primaryKey="true" primaryKeyName="..."/>
+     * Pattern E: <createTable> with inline primaryKey constraint.
      */
     private fun parsePrimaryKeys(doc: Document, filePath: String, results: MutableList<IndexedColumn>) {
         forEachElement(doc, "createTable") { tableElem ->
             val tableName = tableElem.getAttribute("tableName")
-            val columns = getChildElements(tableElem, "column")
 
-            columns.forEach { colElem ->
+            tableElem.childElements("column").forEach { colElem ->
                 val columnName = colElem.getAttribute("name")
-                val constraints = getChildElements(colElem, "constraints")
-                constraints.forEach { constraintElem ->
-                    if (constraintElem.getAttribute("primaryKey") == "true") {
-                        val pkName = constraintElem.getAttribute("primaryKeyName").ifBlank {
-                            "${tableName}_pkey"
-                        }
-                        results.add(
-                            IndexedColumn(
-                                tableName = tableName,
-                                columnName = columnName,
-                                indexName = pkName,
-                                filePath = filePath,
-                                isUnique = true,
-                                compositePosition = 0
-                            )
+                colElem.childElements("constraints")
+                    .filter { it.getAttribute("primaryKey") == "true" }
+                    .forEach { constraintElem ->
+                        val pkName = constraintElem.getAttribute("primaryKeyName").ifBlank { "${tableName}_pkey" }
+                        results += IndexedColumn(
+                            tableName = tableName,
+                            columnName = columnName,
+                            indexName = pkName,
+                            filePath = filePath,
+                            isUnique = true,
+                            compositePosition = 0
                         )
                     }
-                }
             }
         }
     }
@@ -237,115 +208,78 @@ object LiquibaseParser {
     private fun parseCreateTableUniqueConstraints(doc: Document, filePath: String, results: MutableList<IndexedColumn>) {
         forEachElement(doc, "createTable") { tableElem ->
             val tableName = tableElem.getAttribute("tableName")
-            val columns = getChildElements(tableElem, "column")
 
-            columns.forEach { colElem ->
+            tableElem.childElements("column").forEach { colElem ->
                 val columnName = colElem.getAttribute("name")
-                val constraints = getChildElements(colElem, "constraints")
-                constraints.forEach { constraintElem ->
-                    if (constraintElem.getAttribute("unique") == "true" &&
-                        constraintElem.getAttribute("primaryKey") != "true"
-                    ) {
+                colElem.childElements("constraints")
+                    .filter { it.getAttribute("unique") == "true" && it.getAttribute("primaryKey") != "true" }
+                    .forEach { constraintElem ->
                         val constraintName = constraintElem.getAttribute("uniqueConstraintName").ifBlank {
                             "${tableName}_${columnName}_unique"
                         }
-                        results.add(
-                            IndexedColumn(
-                                tableName = tableName,
-                                columnName = columnName,
-                                indexName = constraintName,
-                                filePath = filePath,
-                                isUnique = true,
-                                compositePosition = 0
-                            )
+                        results += IndexedColumn(
+                            tableName = tableName,
+                            columnName = columnName,
+                            indexName = constraintName,
+                            filePath = filePath,
+                            isUnique = true,
+                            compositePosition = 0
                         )
                     }
-                }
             }
         }
     }
 
     /**
-     * Pattern F: <addColumn tableName="...">
-     *                <column name="..." type="...">
-     *                    <constraints unique="true"/>
-     *                </column>
-     *            </addColumn>
+     * Pattern F: <addColumn tableName="..."> with <constraints unique="true"/>
      */
     private fun parseAddColumnUniqueConstraints(doc: Document, filePath: String, results: MutableList<IndexedColumn>) {
         forEachElement(doc, "addColumn") { addColElem ->
             val tableName = addColElem.getAttribute("tableName")
-            val columns = getChildElements(addColElem, "column")
 
-            columns.forEach { colElem ->
+            addColElem.childElements("column").forEach { colElem ->
                 val columnName = colElem.getAttribute("name")
-                val constraints = getChildElements(colElem, "constraints")
-                constraints.forEach { constraintElem ->
-                    if (constraintElem.getAttribute("unique") == "true") {
+                colElem.childElements("constraints")
+                    .filter { it.getAttribute("unique") == "true" }
+                    .forEach { constraintElem ->
                         val constraintName = constraintElem.getAttribute("uniqueConstraintName").ifBlank {
                             "${tableName}_${columnName}_unique"
                         }
-                        results.add(
-                            IndexedColumn(
-                                tableName = tableName,
-                                columnName = columnName,
-                                indexName = constraintName,
-                                filePath = filePath,
-                                isUnique = true,
-                                compositePosition = 0
-                            )
+                        results += IndexedColumn(
+                            tableName = tableName,
+                            columnName = columnName,
+                            indexName = constraintName,
+                            filePath = filePath,
+                            isUnique = true,
+                            compositePosition = 0
                         )
                     }
-                }
             }
         }
     }
 
     // --- Utility functions ---
 
-    private fun isInsideRollback(element: Element): Boolean {
-        var parent = element.parentNode
-        while (parent != null) {
-            if (parent is Element && parent.localName == "rollback") return true
-            parent = parent.parentNode
-        }
-        return false
-    }
+    private fun Element.isInsideRollback(): Boolean =
+        generateSequence(parentNode) { it.parentNode }
+            .any { it is Element && it.localName == "rollback" }
 
-    /**
-     * Iterates over all elements with the given local name in the document,
-     * handling XML namespace-aware lookups.
-     */
+    private fun Element.childElements(localName: String): List<Element> =
+        (0 until childNodes.length)
+            .map { childNodes.item(it) }
+            .filterIsInstance<Element>()
+            .filter { it.localName == localName || it.tagName == localName }
+
     private fun forEachElement(doc: Document, localName: String, action: (Element) -> Unit) {
         // Try namespace-aware lookup first
         val nsElements = doc.getElementsByTagNameNS("*", localName)
-        if (nsElements.length > 0) {
-            forEachNode(nsElements, action)
-            return
-        }
-        // Fallback to non-namespace lookup
-        val elements = doc.getElementsByTagName(localName)
-        forEachNode(elements, action)
+        val elements = if (nsElements.length > 0) nsElements else doc.getElementsByTagName(localName)
+        elements.forEach(action)
     }
 
-    private fun forEachNode(nodeList: NodeList, action: (Element) -> Unit) {
-        for (i in 0 until nodeList.length) {
-            val node = nodeList.item(i)
-            if (node is Element) {
-                action(node)
-            }
+    private fun NodeList.forEach(action: (Element) -> Unit) {
+        for (i in 0 until length) {
+            (item(i) as? Element)?.let(action)
         }
-    }
-
-    private fun getChildElements(parent: Element, localName: String): List<Element> {
-        val result = mutableListOf<Element>()
-        val children = parent.childNodes
-        for (i in 0 until children.length) {
-            val child = children.item(i)
-            if (child is Element && (child.localName == localName || child.tagName == localName)) {
-                result.add(child)
-            }
-        }
-        return result
     }
 }

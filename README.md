@@ -51,6 +51,9 @@ dbIndexChecker {
     // Columns to always exclude (default: ["id"])
     excludeColumns.set(listOf("id"))
 
+    // Per-finding exclusions as "table.column" pairs (default: [])
+    excludeFindings.set(listOf("users.status", "orders.total_amount"))
+
     // Module names to scan in a monorepo (default: [] = auto-discover)
     serviceNames.set(listOf("user-service", "order-service"))
 
@@ -66,6 +69,34 @@ dbIndexChecker {
 ```
 
 When baseline exists, report output is split into `new`, `existing`, and `resolved` issues.
+
+## Suppressing Findings
+
+### In source code
+
+Add `@SuppressIndexCheck` in a comment above a repository method to suppress its findings:
+
+```kotlin
+// @SuppressIndexCheck
+fun findByStatus(status: String): List<User>
+
+// @SuppressIndexCheck("status", "email_address")  — suppress specific columns only
+fun findByStatusAndEmailAndName(status: String, email: String, name: String): List<User>
+```
+
+Without arguments, all columns from that method are suppressed. With column names, only those specific columns are suppressed. The suppression applies only to the immediately following method.
+
+### In configuration
+
+Use `excludeFindings` for table+column pair exclusions without modifying source code:
+
+```kotlin
+dbIndexChecker {
+    excludeFindings.set(listOf("users.status", "orders.total_amount"))
+}
+```
+
+This is useful when you intentionally query without an index (e.g., low-cardinality columns, small tables) and don't want to annotate every call site.
 
 ## What It Detects
 

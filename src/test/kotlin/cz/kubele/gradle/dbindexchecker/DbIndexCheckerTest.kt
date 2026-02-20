@@ -446,6 +446,100 @@ class DbIndexCheckerTest {
     }
 
     @Test
+    fun `findMissingIndexes respects excludeFindings`() {
+        val queryColumns = listOf(
+            QueryColumn(
+                tableName = "users",
+                columnName = "email",
+                source = "findByEmail",
+                filePath = "/test/UserRepo.kt",
+                lineNumber = 10,
+                queryType = QueryType.DERIVED_QUERY
+            ),
+            QueryColumn(
+                tableName = "users",
+                columnName = "name",
+                source = "findByName",
+                filePath = "/test/UserRepo.kt",
+                lineNumber = 15,
+                queryType = QueryType.DERIVED_QUERY
+            )
+        )
+
+        val result = DbIndexChecker.findMissingIndexes(
+            serviceName = "test-service",
+            queryColumns = queryColumns,
+            indexedColumns = emptyList(),
+            excludeTables = emptySet(),
+            excludeColumns = emptySet(),
+            excludeFindings = setOf("users.email")
+        )
+
+        assertEquals(1, result.size)
+        assertEquals("name", result[0].columnName)
+    }
+
+    @Test
+    fun `findMissingIndexes excludeFindings is case-insensitive`() {
+        val queryColumns = listOf(
+            QueryColumn(
+                tableName = "Users",
+                columnName = "Email",
+                source = "findByEmail",
+                filePath = "/test/UserRepo.kt",
+                lineNumber = 10,
+                queryType = QueryType.DERIVED_QUERY
+            )
+        )
+
+        val result = DbIndexChecker.findMissingIndexes(
+            serviceName = "test-service",
+            queryColumns = queryColumns,
+            indexedColumns = emptyList(),
+            excludeTables = emptySet(),
+            excludeColumns = emptySet(),
+            excludeFindings = setOf("users.email")
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `findMissingIndexes excludeFindings does not affect other table-column pairs`() {
+        val queryColumns = listOf(
+            QueryColumn(
+                tableName = "users",
+                columnName = "email",
+                source = "findByEmail",
+                filePath = "/test/UserRepo.kt",
+                lineNumber = 10,
+                queryType = QueryType.DERIVED_QUERY
+            ),
+            QueryColumn(
+                tableName = "orders",
+                columnName = "email",
+                source = "findByEmail",
+                filePath = "/test/OrderRepo.kt",
+                lineNumber = 10,
+                queryType = QueryType.DERIVED_QUERY
+            )
+        )
+
+        val result = DbIndexChecker.findMissingIndexes(
+            serviceName = "test-service",
+            queryColumns = queryColumns,
+            indexedColumns = emptyList(),
+            excludeTables = emptySet(),
+            excludeColumns = emptySet(),
+            excludeFindings = setOf("users.email")
+        )
+
+        assertEquals(1, result.size)
+        assertEquals("orders", result[0].tableName)
+        assertEquals("email", result[0].columnName)
+    }
+
+    @Test
     fun `findMissingIndexes mixed scenario - some indexed some not`() {
         val queryColumns = listOf(
             QueryColumn(

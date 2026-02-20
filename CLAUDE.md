@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Gradle plugin (`cz.kubele.index-checker`) that validates database indexes for Spring Data repository queries against Liquibase changelog definitions. It parses JPA entities, Spring Data repositories (derived queries, JPQL, native SQL), and Liquibase XML changelogs, then reports columns used in queries that lack corresponding database indexes.
+A Gradle plugin (`cz.kubele.db-index-checker`) that validates database indexes for Spring Data repository queries against Liquibase changelog definitions. It parses JPA entities, Spring Data repositories (derived queries, JPQL, native SQL), and Liquibase XML changelogs, then reports columns used in queries that lack corresponding database indexes.
 
 ## Build Commands
 
@@ -15,7 +15,7 @@ A Gradle plugin (`cz.kubele.index-checker`) that validates database indexes for 
 ./gradlew publishToMavenLocal  # Publish to local Maven repo
 ```
 
-Kotlin 2.2.21, Java 21, Gradle 9.3.1.
+Kotlin 2.3.10, Java 21, Gradle 9.3.1.
 
 ## Architecture
 
@@ -46,3 +46,4 @@ Extension name: `indexChecker`. Key properties: `failOnMissing` (fail build on i
 - Entity parsing adds implicit base fields: `id`, `created_at`, `updated_at`
 - All entity/column comparisons are case-insensitive (lowercase)
 - No Spring dependency at runtime — the plugin only analyzes Spring Data source files via regex/text parsing
+- Use idiomatic Kotlin language features.

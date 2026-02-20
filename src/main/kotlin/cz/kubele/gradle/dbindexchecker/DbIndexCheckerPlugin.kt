@@ -11,6 +11,9 @@ class DbIndexCheckerPlugin : Plugin<Project> {
             task.group = "verification"
             task.description = "Check that all columns used in repository queries have database indexes"
             task.failOnMissing.set(extension.failOnMissing)
+            task.failOnNewMissing.set(extension.failOnNewMissing)
+            task.warnOnExistingMissing.set(extension.warnOnExistingMissing)
+            task.baselineFilePath.set(extension.baselineFilePath)
             task.excludeTables.set(extension.excludeTables)
             task.excludeColumns.set(extension.excludeColumns)
             task.serviceNames.set(extension.serviceNames)

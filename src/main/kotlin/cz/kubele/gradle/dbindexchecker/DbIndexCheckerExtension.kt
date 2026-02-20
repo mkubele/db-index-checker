@@ -8,6 +8,15 @@ abstract class DbIndexCheckerExtension {
     /** Fail the build if missing indexes are found. Default: false (warn only). */
     abstract val failOnMissing: Property<Boolean>
 
+    /** Fail the build only when new missing indexes (not in baseline) are found. */
+    abstract val failOnNewMissing: Property<Boolean>
+
+    /** Print warnings for existing baseline issues. */
+    abstract val warnOnExistingMissing: Property<Boolean>
+
+    /** Path to baseline JSON file, relative to root project. */
+    abstract val baselineFilePath: Property<String>
+
     /** Table names to exclude from checking. */
     abstract val excludeTables: ListProperty<String>
 
@@ -42,6 +51,9 @@ abstract class DbIndexCheckerExtension {
 
     init {
         failOnMissing.convention(false)
+        failOnNewMissing.convention(false)
+        warnOnExistingMissing.convention(true)
+        baselineFilePath.convention("db-index-checker-baseline.json")
         excludeTables.convention(listOf("databasechangelog", "databasechangeloglock"))
         excludeColumns.convention(listOf("id"))
         serviceNames.convention(emptyList())

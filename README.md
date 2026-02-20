@@ -17,12 +17,17 @@ plugins {
 ## Usage
 
 ```bash
-./gradlew indexCheck
+./gradlew dbIndexCheck
 ```
 
 Reports are generated at:
 - `build/reports/index-check/missing-indexes.html`
 - `build/reports/index-check/missing-indexes.json`
+
+Create/update baseline file:
+```bash
+./gradlew dbIndexCheck --write-baseline
+```
 
 ## Configuration
 
@@ -30,6 +35,15 @@ Reports are generated at:
 dbIndexChecker {
     // Fail the build if missing indexes are found (default: false, warn only)
     failOnMissing.set(true)
+
+    // Fail only on new issues compared to baseline (default: false)
+    failOnNewMissing.set(true)
+
+    // Warn for issues already listed in baseline (default: true)
+    warnOnExistingMissing.set(true)
+
+    // Baseline JSON path relative to root project (default: "db-index-checker-baseline.json")
+    baselineFilePath.set("db-index-checker-baseline.json")
 
     // Tables to exclude from checking (default: ["databasechangelog", "databasechangeloglock"])
     excludeTables.set(listOf("databasechangelog", "databasechangeloglock", "flyway_schema_history"))
@@ -50,6 +64,8 @@ dbIndexChecker {
     liquibaseRelativePath.set("src/main/resources/db")
 }
 ```
+
+When baseline exists, report output is split into `new`, `existing`, and `resolved` issues.
 
 ## What It Detects
 

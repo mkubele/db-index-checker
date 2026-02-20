@@ -1,5 +1,7 @@
 package cz.kubele.gradle.dbindexchecker.report
 
+import cz.kubele.gradle.dbindexchecker.model.BaselineComparison
+import cz.kubele.gradle.dbindexchecker.model.BaselineIssue
 import cz.kubele.gradle.dbindexchecker.model.MissingIndex
 import cz.kubele.gradle.dbindexchecker.model.QueryType
 import org.gradle.api.logging.Logger
@@ -8,51 +10,91 @@ import java.io.File
 object ReportGenerator {
 
     fun generate(
-        missingIndexes: List<MissingIndex>,
+        comparison: BaselineComparison,
         logger: Logger,
         htmlFile: File,
-        jsonFile: File
+        jsonFile: File,
+        warnOnExistingMissing: Boolean
     ) {
-        printConsole(missingIndexes, logger)
-        writeHtml(missingIndexes, htmlFile)
-        writeJson(missingIndexes, jsonFile)
+        printConsole(comparison, logger, warnOnExistingMissing)
+        writeHtml(comparison, htmlFile)
+        writeJson(comparison, jsonFile)
 
         logger.lifecycle("Reports written to:")
         logger.lifecycle("  HTML: ${htmlFile.absolutePath}")
         logger.lifecycle("  JSON: ${jsonFile.absolutePath}")
     }
 
-    private fun printConsole(missingIndexes: List<MissingIndex>, logger: Logger) {
-        if (missingIndexes.isEmpty()) {
+    private fun printConsole(comparison: BaselineComparison, logger: Logger, warnOnExistingMissing: Boolean) {
+        if (comparison.current.isEmpty() && comparison.resolvedIssues.isEmpty()) {
             logger.lifecycle("Index Checker: All queried columns have indexes!")
             return
         }
 
         logger.lifecycle("")
-        logger.warn("Index Checker: Found ${missingIndexes.size} potentially missing indexes")
+        logger.warn("Index Checker: Found ${comparison.current.size} potentially missing indexes")
+        logger.lifecycle("  New: ${comparison.newIssues.size}, Existing: ${comparison.existingIssues.size}, Resolved: ${comparison.resolvedIssues.size}")
         logger.lifecycle("")
 
-        val byService = missingIndexes.groupBy { it.serviceName }
-        for ((serviceName, serviceIndexes) in byService.entries.sortedBy { it.key }) {
-            logger.lifecycle("  $serviceName:")
-            val byTable = serviceIndexes.groupBy { it.tableName }
-            for ((tableName, tableIndexes) in byTable.entries.sortedBy { it.key.lowercase() }) {
-                logger.lifecycle("    Table '$tableName':")
-                for (mi in tableIndexes.sortedBy { it.columnName.lowercase() }) {
-                    logger.warn("      - Column '${mi.columnName}' used in ${formatQueryDescription(mi)} (${mi.repositoryFile}:${mi.lineNumber})")
-                }
-                logger.lifecycle("")
-            }
+        printIssueSection("New missing indexes", comparison.newIssues, logger, true)
+
+        if (warnOnExistingMissing) {
+            printIssueSection("Existing baseline issues", comparison.existingIssues, logger, true)
+        } else if (comparison.existingIssues.isNotEmpty()) {
+            logger.lifecycle("  Existing baseline issues: ${comparison.existingIssues.size} (suppressed)")
+            logger.lifecycle("")
         }
 
-        logger.lifecycle("Total: ${missingIndexes.size} potentially missing indexes across ${byService.size} services")
+        if (comparison.resolvedIssues.isNotEmpty()) {
+            logger.lifecycle("  Resolved since baseline:")
+            comparison.resolvedIssues
+                .groupBy { it.serviceName }
+                .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+                .forEach { (serviceName, serviceIssues) ->
+                    logger.lifecycle("    $serviceName:")
+                    serviceIssues
+                        .groupBy { it.tableName }
+                        .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+                        .forEach { (tableName, tableIssues) ->
+                            val columns = tableIssues.map { it.columnName }.sortedWith(String.CASE_INSENSITIVE_ORDER).joinToString(", ")
+                            logger.lifecycle("      - $tableName: $columns")
+                        }
+                }
+            logger.lifecycle("")
+        }
+
+        val serviceCount = comparison.current.map { it.serviceName }.distinctBy { it.lowercase() }.size
+        logger.lifecycle("Total: ${comparison.current.size} potentially missing indexes across $serviceCount services")
         logger.lifecycle("")
     }
 
-    private fun writeHtml(missingIndexes: List<MissingIndex>, file: File) {
+    private fun printIssueSection(title: String, issues: List<MissingIndex>, logger: Logger, asWarning: Boolean) {
+        if (issues.isEmpty()) return
+
+        logger.lifecycle("  $title:")
+        issues
+            .groupBy { it.serviceName }
+            .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+            .forEach { (serviceName, serviceIssues) ->
+                logger.lifecycle("    $serviceName:")
+                serviceIssues
+                    .groupBy { it.tableName }
+                    .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+                    .forEach { (tableName, tableIssues) ->
+                        logger.lifecycle("      Table '$tableName':")
+                        tableIssues
+                            .sortedBy { it.columnName.lowercase() }
+                            .forEach { issue ->
+                                val message = "        - Column '${issue.columnName}' used in ${formatQueryDescription(issue)} (${issue.repositoryFile}:${issue.lineNumber})"
+                                if (asWarning) logger.warn(message) else logger.lifecycle(message)
+                            }
+                    }
+            }
+        logger.lifecycle("")
+    }
+
+    private fun writeHtml(comparison: BaselineComparison, file: File) {
         file.parentFile.mkdirs()
-        val total = missingIndexes.size
-        val byService = missingIndexes.groupBy { it.serviceName }
 
         file.writeText(buildString {
             appendLine("<!DOCTYPE html>")
@@ -65,36 +107,15 @@ object ReportGenerator {
             appendLine("</style>")
             appendLine("</head>")
             appendLine("<body>")
+            appendLine("<h1>Index Check Report</h1>")
 
-            if (total == 0) {
-                appendLine("<h1>Index Check Report</h1>")
+            if (comparison.current.isEmpty() && comparison.resolvedIssues.isEmpty()) {
                 appendLine("<p class=\"success\">All queried columns have indexes!</p>")
             } else {
-                appendLine("<h1>Index Check Report</h1>")
-                appendLine("<p class=\"summary\">Found <strong>$total</strong> potentially missing indexes across <strong>${byService.size}</strong> services</p>")
-                appendLine("<table>")
-                appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th><th>Query</th><th>Source</th></tr></thead>")
-                appendLine("<tbody>")
-
-                for ((serviceName, serviceIndexes) in byService.entries.sortedBy { it.key }) {
-                    val byTable = serviceIndexes.groupBy { it.tableName }
-                    for ((tableName, tableIndexes) in byTable.entries.sortedBy { it.key.lowercase() }) {
-                        for (mi in tableIndexes.sortedBy { it.columnName.lowercase() }) {
-                            val queryDesc = escapeHtml(formatQueryDescription(mi))
-                            val filePath = escapeHtml(mi.repositoryFile)
-                            appendLine("<tr>")
-                            appendLine("  <td>${escapeHtml(serviceName)}</td>")
-                            appendLine("  <td><code>${escapeHtml(tableName)}</code></td>")
-                            appendLine("  <td><code>${escapeHtml(mi.columnName)}</code></td>")
-                            appendLine("  <td>$queryDesc</td>")
-                            appendLine("  <td><a href=\"#\" onclick=\"openInIde('${escapeJs(mi.repositoryFile)}', ${mi.lineNumber}); return false;\">${escapeHtml(shortPath(mi.repositoryFile))}:${mi.lineNumber}</a></td>")
-                            appendLine("</tr>")
-                        }
-                    }
-                }
-
-                appendLine("</tbody>")
-                appendLine("</table>")
+                appendLine("<p class=\"summary\">Total <strong>${comparison.current.size}</strong> missing indexes | New: <strong>${comparison.newIssues.size}</strong> | Existing: <strong>${comparison.existingIssues.size}</strong> | Resolved: <strong>${comparison.resolvedIssues.size}</strong></p>")
+                appendIssueTable("New missing indexes", comparison.newIssues, this)
+                appendIssueTable("Existing baseline issues", comparison.existingIssues, this)
+                appendResolvedTable("Resolved since baseline", comparison.resolvedIssues, this)
             }
 
             appendLine("<script>")
@@ -105,31 +126,95 @@ object ReportGenerator {
         })
     }
 
-    private fun writeJson(missingIndexes: List<MissingIndex>, file: File) {
+    private fun appendIssueTable(title: String, issues: List<MissingIndex>, out: StringBuilder) {
+        if (issues.isEmpty()) return
+
+        out.appendLine("<h2>$title</h2>")
+        out.appendLine("<table>")
+        out.appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th><th>Query</th><th>Source</th></tr></thead>")
+        out.appendLine("<tbody>")
+
+        for (issue in issues.sortedWith(compareBy({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() }))) {
+            out.appendLine("<tr>")
+            out.appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
+            out.appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
+            out.appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
+            out.appendLine("  <td>${escapeHtml(formatQueryDescription(issue))}</td>")
+            out.appendLine("  <td><a href=\"#\" onclick=\"openInIde('${escapeJs(issue.repositoryFile)}', ${issue.lineNumber}); return false;\">${escapeHtml(shortPath(issue.repositoryFile))}:${issue.lineNumber}</a></td>")
+            out.appendLine("</tr>")
+        }
+
+        out.appendLine("</tbody>")
+        out.appendLine("</table>")
+    }
+
+    private fun appendResolvedTable(title: String, issues: List<BaselineIssue>, out: StringBuilder) {
+        if (issues.isEmpty()) return
+
+        out.appendLine("<h2>$title</h2>")
+        out.appendLine("<table>")
+        out.appendLine("<thead><tr><th>Service</th><th>Table</th><th>Column</th></tr></thead>")
+        out.appendLine("<tbody>")
+
+        for (issue in issues.sortedWith(compareBy({ it.serviceName.lowercase() }, { it.tableName.lowercase() }, { it.columnName.lowercase() }))) {
+            out.appendLine("<tr>")
+            out.appendLine("  <td>${escapeHtml(issue.serviceName)}</td>")
+            out.appendLine("  <td><code>${escapeHtml(issue.tableName)}</code></td>")
+            out.appendLine("  <td><code>${escapeHtml(issue.columnName)}</code></td>")
+            out.appendLine("</tr>")
+        }
+
+        out.appendLine("</tbody>")
+        out.appendLine("</table>")
+    }
+
+    private fun writeJson(comparison: BaselineComparison, file: File) {
         file.parentFile.mkdirs()
 
         file.writeText(buildString {
             appendLine("{")
-            appendLine("  \"total\": ${missingIndexes.size},")
-            appendLine("  \"services\": ${missingIndexes.map { it.serviceName }.distinct().size},")
-            appendLine("  \"issues\": [")
-
-            missingIndexes.forEachIndexed { i, mi ->
-                val comma = if (i < missingIndexes.size - 1) "," else ""
-                appendLine("    {")
-                appendLine("      \"service\": ${jsonStr(mi.serviceName)},")
-                appendLine("      \"table\": ${jsonStr(mi.tableName)},")
-                appendLine("      \"column\": ${jsonStr(mi.columnName)},")
-                appendLine("      \"queryType\": ${jsonStr(mi.queryType.name)},")
-                appendLine("      \"querySource\": ${jsonStr(mi.querySource)},")
-                appendLine("      \"file\": ${jsonStr(mi.repositoryFile)},")
-                appendLine("      \"line\": ${mi.lineNumber}")
-                appendLine("    }$comma")
+            appendLine("  \"total\": ${comparison.current.size},")
+            appendLine("  \"new\": ${comparison.newIssues.size},")
+            appendLine("  \"existing\": ${comparison.existingIssues.size},")
+            appendLine("  \"resolved\": ${comparison.resolvedIssues.size},")
+            appendLine("  \"issues\": {")
+            appendLine("    \"new\": [")
+            comparison.newIssues.forEachIndexed { i, issue ->
+                appendMissingIssue(issue, i < comparison.newIssues.size - 1, this)
             }
-
+            appendLine("    ],")
+            appendLine("    \"existing\": [")
+            comparison.existingIssues.forEachIndexed { i, issue ->
+                appendMissingIssue(issue, i < comparison.existingIssues.size - 1, this)
+            }
+            appendLine("    ],")
+            appendLine("    \"resolved\": [")
+            comparison.resolvedIssues.forEachIndexed { i, issue ->
+                val comma = if (i < comparison.resolvedIssues.size - 1) "," else ""
+                appendLine("      {\"service\": ${jsonStr(issue.serviceName)}, \"table\": ${jsonStr(issue.tableName)}, \"column\": ${jsonStr(issue.columnName)}}$comma")
+            }
+            appendLine("    ]")
+            appendLine("  },")
+            appendLine("  \"allCurrent\": [")
+            comparison.current.forEachIndexed { i, issue ->
+                appendMissingIssue(issue, i < comparison.current.size - 1, this)
+            }
             appendLine("  ]")
             appendLine("}")
         })
+    }
+
+    private fun appendMissingIssue(issue: MissingIndex, withComma: Boolean, out: StringBuilder) {
+        val comma = if (withComma) "," else ""
+        out.appendLine("      {")
+        out.appendLine("        \"service\": ${jsonStr(issue.serviceName)},")
+        out.appendLine("        \"table\": ${jsonStr(issue.tableName)},")
+        out.appendLine("        \"column\": ${jsonStr(issue.columnName)},")
+        out.appendLine("        \"queryType\": ${jsonStr(issue.queryType.name)},")
+        out.appendLine("        \"querySource\": ${jsonStr(issue.querySource)},")
+        out.appendLine("        \"file\": ${jsonStr(issue.repositoryFile)},")
+        out.appendLine("        \"line\": ${issue.lineNumber}")
+        out.appendLine("      }$comma")
     }
 
     private fun formatQueryDescription(mi: MissingIndex): String {
@@ -154,7 +239,6 @@ object ReportGenerator {
     private fun escapeJs(s: String): String =
         s.replace("\\", "\\\\").replace("'", "\\'")
 
-
     private fun jsonStr(s: String): String =
         "\"${s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
 
@@ -162,7 +246,6 @@ object ReportGenerator {
         function openInIde(file, line) {
             fetch('http://localhost:63342/api/file/' + encodeURIComponent(file) + ':' + line)
                 .catch(function() {
-                    // Fallback: try idea:// protocol
                     window.location = 'idea://open?file=' + encodeURIComponent(file) + '&line=' + line;
                 });
         }
@@ -171,7 +254,8 @@ object ReportGenerator {
     private val CSS = """
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 2rem; color: #333; }
         h1 { color: #1a1a1a; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }
-        .summary { font-size: 1.1rem; color: #b45309; background: #fef3c7; padding: 0.75rem 1rem; border-radius: 6px; }
+        h2 { margin-top: 1.6rem; color: #1f2937; }
+        .summary { font-size: 1.1rem; color: #1f2937; background: #e5e7eb; padding: 0.75rem 1rem; border-radius: 6px; }
         .success { font-size: 1.1rem; color: #065f46; background: #d1fae5; padding: 0.75rem 1rem; border-radius: 6px; }
         table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
         th { background: #f3f4f6; text-align: left; padding: 0.6rem 0.8rem; border-bottom: 2px solid #d1d5db; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }

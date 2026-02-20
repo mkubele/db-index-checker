@@ -1,8 +1,10 @@
 package cz.kubele.gradle.dbindexchecker
 
 import cz.kubele.gradle.dbindexchecker.checker.DbIndexChecker
+import cz.kubele.gradle.dbindexchecker.model.BaselineIssue
 import cz.kubele.gradle.dbindexchecker.model.MissingIndex
 import cz.kubele.gradle.dbindexchecker.model.TableMapping
+import cz.kubele.gradle.dbindexchecker.report.BaselineManager
 import cz.kubele.gradle.dbindexchecker.parser.EntityParser
 import cz.kubele.gradle.dbindexchecker.parser.LiquibaseParser
 import cz.kubele.gradle.dbindexchecker.parser.RepositoryParser
@@ -19,12 +21,22 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
 import java.io.File
 
 abstract class DbIndexCheckerTask : DefaultTask() {
 
     @get:Input
     abstract val failOnMissing: Property<Boolean>
+
+    @get:Input
+    abstract val failOnNewMissing: Property<Boolean>
+
+    @get:Input
+    abstract val warnOnExistingMissing: Property<Boolean>
+
+    @get:Input
+    abstract val baselineFilePath: Property<String>
 
     @get:Input
     abstract val excludeTables: ListProperty<String>
@@ -54,6 +66,18 @@ abstract class DbIndexCheckerTask : DefaultTask() {
     @get:OutputFile
     abstract val jsonReportFile: RegularFileProperty
 
+    @get:Input
+    abstract val writeBaseline: Property<Boolean>
+
+    init {
+        writeBaseline.convention(false)
+    }
+
+    @Option(option = "write-baseline", description = "Write current missing indexes into baseline JSON and exit without failing")
+    fun setWriteBaseline(value: Boolean) {
+        writeBaseline.set(value)
+    }
+
     @TaskAction
     fun check() {
         val rootDir = rootProjectDir.get().asFile
@@ -63,7 +87,7 @@ abstract class DbIndexCheckerTask : DefaultTask() {
             // Single-module project: scan the root itself
             logger.lifecycle("Index Checker: Scanning single-module project...")
             val missing = checkModule(rootDir.name, rootDir)
-            finish(missing)
+            finish(missing, rootDir)
             return
         }
 
@@ -79,17 +103,44 @@ abstract class DbIndexCheckerTask : DefaultTask() {
             allMissing.addAll(checkModule(moduleName, moduleDir))
         }
 
-        finish(allMissing)
+        finish(allMissing, rootDir)
     }
 
-    private fun finish(allMissing: List<MissingIndex>) {
-        ReportGenerator.generate(allMissing, logger, htmlReportFile.get().asFile, jsonReportFile.get().asFile)
+    private fun finish(allMissing: List<MissingIndex>, rootDir: File) {
+        val baselineFile = resolveBaselineFile(rootDir)
+        val shouldWriteBaseline = writeBaseline.orNull == true
+
+        if (shouldWriteBaseline) {
+            BaselineManager.writeBaseline(baselineFile, allMissing)
+            logger.lifecycle("Index Checker: Baseline written to ${baselineFile.absolutePath} with ${allMissing.size} issue(s)")
+            val comparison = BaselineManager.compare(allMissing, allMissing.map {
+                BaselineIssue(it.serviceName, it.tableName, it.columnName)
+            })
+            ReportGenerator.generate(comparison, logger, htmlReportFile.get().asFile, jsonReportFile.get().asFile, warnOnExistingMissing.get())
+            return
+        }
+
+        val baselineIssues = BaselineManager.readBaseline(baselineFile)
+        val comparison = BaselineManager.compare(allMissing, baselineIssues)
+        ReportGenerator.generate(comparison, logger, htmlReportFile.get().asFile, jsonReportFile.get().asFile, warnOnExistingMissing.get())
+
+        if (failOnNewMissing.get() && comparison.newIssues.isNotEmpty()) {
+            throw GradleException(
+                "Index check failed: Found ${comparison.newIssues.size} new missing indexes not present in baseline"
+            )
+        }
 
         if (failOnMissing.get() && allMissing.isNotEmpty()) {
             throw GradleException(
                 "Index check failed: Found ${allMissing.size} columns used in queries without indexes"
             )
         }
+    }
+
+    private fun resolveBaselineFile(rootDir: File): File {
+        val configured = baselineFilePath.get().trim()
+        val candidate = File(configured)
+        return if (candidate.isAbsolute) candidate else File(rootDir, configured)
     }
 
     private fun checkModule(moduleName: String, moduleDir: File): List<MissingIndex> {

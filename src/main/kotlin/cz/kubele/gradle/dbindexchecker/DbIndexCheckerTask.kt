@@ -95,8 +95,9 @@ abstract class DbIndexCheckerTask : DefaultTask() {
         outputs.cacheIf { !writeBaseline.get() }
     }
 
+	@Suppress("unused")
     @Option(option = "write-baseline", description = "Write current missing indexes into baseline JSON and exit without failing")
-    fun setWriteBaseline(value: Boolean) {
+    fun configureWriteBaselineOption(value: Boolean) {
         writeBaseline.set(value)
     }
 

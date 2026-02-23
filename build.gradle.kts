@@ -32,6 +32,7 @@ kotlin {
 
 dependencies {
     implementation(gradleApi())
+    testImplementation(gradleTestKit())
     testImplementation(kotlin("test"))
 }
 

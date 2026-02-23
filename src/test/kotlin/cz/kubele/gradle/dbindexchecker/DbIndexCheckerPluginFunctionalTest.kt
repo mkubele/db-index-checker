@@ -40,4 +40,39 @@ class DbIndexCheckerPluginFunctionalTest {
             projectDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `check task runs dbIndexCheck automatically`() {
+        val projectDir = Files.createTempDirectory("db-index-checker-functional").toFile()
+        try {
+            projectDir.resolve("settings.gradle.kts").writeText(
+                """
+                rootProject.name = "test-project"
+                """.trimIndent()
+            )
+            projectDir.resolve("build.gradle.kts").writeText(
+                """
+                plugins {
+                    id("cz.kubele.db-index-checker")
+                    kotlin("jvm") version "2.3.10"
+                }
+
+                repositories {
+                    mavenCentral()
+                }
+                """.trimIndent()
+            )
+
+            val result = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withPluginClasspath()
+                .withArguments("check")
+                .build()
+
+            assertEquals(TaskOutcome.SUCCESS, result.task(":dbIndexCheck")?.outcome)
+            assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+        } finally {
+            projectDir.deleteRecursively()
+        }
+    }
 }

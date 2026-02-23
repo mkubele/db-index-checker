@@ -4,11 +4,12 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import java.io.File
 
+@Suppress("unused")
 class DbIndexCheckerPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("dbIndexChecker", DbIndexCheckerExtension::class.java)
 
-        project.tasks.register("dbIndexCheck", DbIndexCheckerTask::class.java) { task ->
+        val dbIndexCheckTask = project.tasks.register("dbIndexCheck", DbIndexCheckerTask::class.java) { task ->
             task.group = "verification"
             task.description = "Check that all columns used in repository queries have database indexes"
             task.failOnMissing.set(extension.failOnMissing)
@@ -47,6 +48,12 @@ class DbIndexCheckerPlugin : Plugin<Project> {
                     if (file.exists()) project.files(file) else project.files()
                 }
             )
+        }
+
+        project.pluginManager.withPlugin("base") {
+            project.tasks.named("check") {
+                it.dependsOn(dbIndexCheckTask)
+            }
         }
     }
 }

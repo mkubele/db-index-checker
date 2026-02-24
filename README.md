@@ -2,7 +2,7 @@
 
 A Gradle plugin that detects missing database indexes by analyzing Spring Data repository queries against Liquibase changelog definitions.
 
-It parses JPA entity annotations, Spring Data repository interfaces (derived queries, JPQL, and native SQL), and Liquibase XML changelogs, then reports columns used in queries that lack corresponding database indexes.
+It parses JPA entity annotations, Spring Data repository interfaces (derived queries, JPQL, and native SQL), and Liquibase changelogs (XML and formatted SQL), then reports columns used in queries that lack corresponding database indexes.
 
 ## Setup
 
@@ -109,7 +109,7 @@ The plugin parses three sources and cross-references them:
 - **JPQL** — `@Query("SELECT e FROM Employee e WHERE e.department = :dept")`
 - **Native SQL** — `@Query(value = "SELECT * FROM employees WHERE status = :s", nativeQuery = true)`
 
-**Liquibase Changelogs** — `<createIndex>`, `<addUniqueConstraint>`, raw SQL `CREATE INDEX`, primary key definitions, and inline unique constraints. Follows `<include>` directives.
+**Liquibase Changelogs** — XML and formatted SQL changelogs, including `<createIndex>`, `<addUniqueConstraint>`, `<sqlFile>`, raw SQL `CREATE INDEX`, primary key definitions, and inline unique constraints. Follows `<include>`, `<includeAll>`, and SQL `--include file:` directives.
 
 ## Expected Project Structure
 
@@ -120,7 +120,7 @@ my-service/
   src/main/kotlin/.../entity/     # JPA entities
   src/main/kotlin/.../repository/ # Spring Data repositories
   src/main/resources/db/          # Liquibase changelogs
-    changelog.xml                 # Root changelog
+    changelog.xml                 # Root changelog (or changelog.sql)
 ```
 
 For monorepos, the plugin auto-discovers submodules that contain all three directories, or you can specify them explicitly via `serviceNames`.

@@ -11,7 +11,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes returns empty list when changelog does not exist`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             val result = LiquibaseParser.parseIndexes(dir)
             assertTrue(result.isEmpty())
@@ -22,7 +22,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses createIndex element`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -52,7 +52,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses unique createIndex`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -78,7 +78,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses composite createIndex`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -108,7 +108,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses addUniqueConstraint`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -135,7 +135,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses addUniqueConstraint with multiple columns`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -162,7 +162,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses SQL CREATE INDEX`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -189,7 +189,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses SQL CREATE UNIQUE INDEX`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -213,7 +213,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses SQL CREATE INDEX CONCURRENTLY`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -237,7 +237,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses SQL CREATE INDEX IF NOT EXISTS`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -261,7 +261,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes detects partial index with WHERE clause`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -285,7 +285,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes skips SQL in rollback elements`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -313,7 +313,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses primary key from createTable`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -345,7 +345,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses unique constraint from createTable`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -375,7 +375,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes parses unique constraint from addColumn`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -406,7 +406,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes follows include references`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -441,8 +441,82 @@ class LiquibaseParserTest {
     }
 
     @Test
+    fun `parseIndexes parses root changelog sql`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("changelog.sql").writeText("""
+                --liquibase formatted sql
+                --changeset test:1
+                CREATE INDEX idx_users_status ON users(status);
+            """.trimIndent())
+
+            val result = LiquibaseParser.parseIndexes(dir)
+            assertEquals(1, result.size)
+            assertEquals("users", result[0].tableName)
+            assertEquals("status", result[0].columnName)
+            assertEquals("idx_users_status", result[0].indexName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseIndexes parses indexes from xml sqlFile reference`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("changelog.xml").writeText("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+                    <changeSet id="1" author="test">
+                        <sqlFile path="indexes.sql" relativeToChangelogFile="true"/>
+                    </changeSet>
+                </databaseChangeLog>
+            """.trimIndent())
+
+            dir.resolve("indexes.sql").writeText("""
+                --liquibase formatted sql
+                --changeset test:2
+                CREATE INDEX idx_users_city ON users(city);
+            """.trimIndent())
+
+            val result = LiquibaseParser.parseIndexes(dir)
+            assertEquals(1, result.size)
+            assertEquals("city", result[0].columnName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseIndexes follows sql include directives`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("changelog.sql").writeText("""
+                --liquibase formatted sql
+                --include file:indexes.sql
+            """.trimIndent())
+
+            dir.resolve("indexes.sql").writeText("""
+                --liquibase formatted sql
+                --changeset test:3
+                CREATE UNIQUE INDEX idx_users_username ON users(username);
+            """.trimIndent())
+
+            val result = LiquibaseParser.parseIndexes(dir)
+            assertEquals(1, result.size)
+            assertEquals("username", result[0].columnName)
+            assertTrue(result[0].isUnique)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `parseIndexes handles multiple index types in single changelog`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -477,7 +551,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes handles SQL with ASC DESC in column list`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -502,7 +576,7 @@ class LiquibaseParserTest {
 
     @Test
     fun `parseIndexes does not count createTable primaryKey column as unique constraint`() {
-        val dir = createTempDir("liquibase-test")
+        val dir = createTempDir()
         try {
             dir.resolve("changelog.xml").writeText("""
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -530,7 +604,7 @@ class LiquibaseParserTest {
         }
     }
 
-    private fun createTempDir(prefix: String): File {
+    private fun createTempDir(prefix: String = "liquibase-test"): File {
         return kotlin.io.path.createTempDirectory(prefix).toFile()
     }
 }

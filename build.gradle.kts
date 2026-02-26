@@ -3,7 +3,7 @@ plugins {
     id("com.gradle.plugin-publish") version "2.0.0"
 }
 
-group = "cz.kubele.gradle"
+group = "ee.kubele.gradle"
 version = "1.0.0"
 
 repositories {
@@ -15,8 +15,8 @@ gradlePlugin {
     vcsUrl.set("https://github.com/mkubele/db-index-checker")
     plugins {
         create("dbIndexChecker") {
-            id = "cz.kubele.db-index-checker"
-            implementationClass = "cz.kubele.gradle.dbindexchecker.DbIndexCheckerPlugin"
+            id = "ee.kubele.db-index-checker"
+            implementationClass = "ee.kubele.gradle.dbindexchecker.DbIndexCheckerPlugin"
             displayName = "DB Index Checker"
             description = "Gradle plugin that analyzes Spring Data JPA repositories and Liquibase changelogs to report query columns missing database indexes."
             tags.set(listOf("spring-data", "liquibase", "database", "index", "jpa", "static-analysis"))

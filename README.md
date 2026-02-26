@@ -10,7 +10,7 @@ Apply the plugin in your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("cz.kubele.db-index-checker") version "1.0.0"
+    id("ee.kubele.db-index-checker") version "1.0.0"
 }
 ```
 

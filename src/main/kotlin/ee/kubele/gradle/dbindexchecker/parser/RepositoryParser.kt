@@ -57,7 +57,7 @@ object RepositoryParser {
 
     // Regex to detect repository interface declarations and extract entity type.
     private val REPO_ENTITY_REGEX = Regex(
-        """(?:CrudRepository|JpaRepository|PagingAndSortingRepository)<\s*(\w+)\s*,"""
+        """\w+Repository<\s*(\w+)\s*,"""
     )
 
     // Regex to detect @SuppressIndexCheck in a comment

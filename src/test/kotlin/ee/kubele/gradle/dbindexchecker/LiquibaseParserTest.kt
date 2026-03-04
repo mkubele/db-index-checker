@@ -1,30 +1,30 @@
 package ee.kubele.gradle.dbindexchecker
 
 import ee.kubele.gradle.dbindexchecker.parser.LiquibaseParser
-import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class LiquibaseParserTest {
+class LiquibaseParserTest : TestBase() {
 
-    @Test
-    fun `parseIndexes returns empty list when changelog does not exist`() {
-        val dir = createTempDir()
-        try {
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertTrue(result.isEmpty())
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+	@Test
+	fun `parseIndexes returns empty list when changelog does not exist`() {
+		val dir = createTempDir()
+		try {
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertTrue(result.isEmpty())
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses createIndex element`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses createIndex element`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -36,25 +36,27 @@ class LiquibaseParserTest {
                         </createIndex>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("email", result[0].columnName)
-            assertEquals("idx_users_email", result[0].indexName)
-            assertFalse(result[0].isUnique)
-            assertEquals(0, result[0].compositePosition)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("email", result[0].columnName)
+			assertEquals("idx_users_email", result[0].indexName)
+			assertFalse(result[0].isUnique)
+			assertEquals(0, result[0].compositePosition)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses unique createIndex`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses unique createIndex`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -66,21 +68,23 @@ class LiquibaseParserTest {
                         </createIndex>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses composite createIndex`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses composite createIndex`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -93,24 +97,26 @@ class LiquibaseParserTest {
                         </createIndex>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(2, result.size)
-            val first = result.find { it.compositePosition == 0 }!!
-            val second = result.find { it.compositePosition == 1 }!!
-            assertEquals("name", first.columnName)
-            assertEquals("email", second.columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(2, result.size)
+			val first = result.find { it.compositePosition == 0 }!!
+			val second = result.find { it.compositePosition == 1 }!!
+			assertEquals("name", first.columnName)
+			assertEquals("email", second.columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses addUniqueConstraint`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses addUniqueConstraint`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -120,24 +126,26 @@ class LiquibaseParserTest {
                         <addUniqueConstraint tableName="users" columnNames="email" constraintName="uq_users_email"/>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("email", result[0].columnName)
-            assertEquals("uq_users_email", result[0].indexName)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("email", result[0].columnName)
+			assertEquals("uq_users_email", result[0].indexName)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses addUniqueConstraint with multiple columns`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses addUniqueConstraint with multiple columns`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -147,24 +155,26 @@ class LiquibaseParserTest {
                         <addUniqueConstraint tableName="users" columnNames="first_name, last_name" constraintName="uq_users_name"/>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(2, result.size)
-            assertEquals("first_name", result[0].columnName)
-            assertEquals("last_name", result[1].columnName)
-            assertEquals(0, result[0].compositePosition)
-            assertEquals(1, result[1].compositePosition)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(2, result.size)
+			assertEquals("first_name", result[0].columnName)
+			assertEquals("last_name", result[1].columnName)
+			assertEquals(0, result[0].compositePosition)
+			assertEquals(1, result[1].compositePosition)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses SQL CREATE INDEX`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses SQL CREATE INDEX`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -174,24 +184,26 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX idx_users_name ON users(name);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("name", result[0].columnName)
-            assertEquals("idx_users_name", result[0].indexName)
-            assertFalse(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("name", result[0].columnName)
+			assertEquals("idx_users_name", result[0].indexName)
+			assertFalse(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses SQL CREATE UNIQUE INDEX`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses SQL CREATE UNIQUE INDEX`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -201,21 +213,23 @@ class LiquibaseParserTest {
                         <sql>CREATE UNIQUE INDEX idx_users_email ON users(email);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses SQL CREATE INDEX CONCURRENTLY`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses SQL CREATE INDEX CONCURRENTLY`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -225,21 +239,23 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX CONCURRENTLY idx_users_name ON users(name);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("name", result[0].columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("name", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses SQL CREATE INDEX IF NOT EXISTS`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses SQL CREATE INDEX IF NOT EXISTS`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -249,21 +265,23 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX IF NOT EXISTS idx_users_name ON users(name);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("name", result[0].columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("name", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes detects partial index with WHERE clause`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes detects partial index with WHERE clause`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -273,21 +291,23 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX idx_users_active ON users(name) WHERE active = true;</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertTrue(result[0].isPartial)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertTrue(result[0].isPartial)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes skips SQL in rollback elements`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes skips SQL in rollback elements`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -300,22 +320,24 @@ class LiquibaseParserTest {
                         </rollback>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            // Should only have the index from the main SQL, not the rollback
-            assertEquals(1, result.size)
-            assertEquals("idx_users_name", result[0].indexName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			// Should only have the index from the main SQL, not the rollback
+			assertEquals(1, result.size)
+			assertEquals("idx_users_name", result[0].indexName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses primary key from createTable`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses primary key from createTable`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -330,24 +352,26 @@ class LiquibaseParserTest {
                         </createTable>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("id", result[0].columnName)
-            assertEquals("pk_users", result[0].indexName)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("id", result[0].columnName)
+			assertEquals("pk_users", result[0].indexName)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses unique constraint from createTable`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses unique constraint from createTable`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -361,23 +385,25 @@ class LiquibaseParserTest {
                         </createTable>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("email", result[0].columnName)
-            assertEquals("uq_email", result[0].indexName)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("email", result[0].columnName)
+			assertEquals("uq_email", result[0].indexName)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses unique constraint from addColumn`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses unique constraint from addColumn`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -391,24 +417,26 @@ class LiquibaseParserTest {
                         </addColumn>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("phone", result[0].columnName)
-            assertEquals("uq_phone", result[0].indexName)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("phone", result[0].columnName)
+			assertEquals("uq_phone", result[0].indexName)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes follows include references`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes follows include references`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -416,9 +444,11 @@ class LiquibaseParserTest {
                     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
                     <include file="indexes.xml" relativeToChangelogFile="true"/>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            dir.resolve("indexes.xml").writeText("""
+			dir.resolve("indexes.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -430,41 +460,45 @@ class LiquibaseParserTest {
                         </createIndex>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("name", result[0].columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("name", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses root changelog sql`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.sql").writeText("""
+	@Test
+	fun `parseIndexes parses root changelog sql`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.sql").writeText(
+				"""
                 --liquibase formatted sql
                 --changeset test:1
                 CREATE INDEX idx_users_status ON users(status);
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("users", result[0].tableName)
-            assertEquals("status", result[0].columnName)
-            assertEquals("idx_users_status", result[0].indexName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("users", result[0].tableName)
+			assertEquals("status", result[0].columnName)
+			assertEquals("idx_users_status", result[0].indexName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes parses indexes from xml sqlFile reference`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes parses indexes from xml sqlFile reference`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -474,51 +508,59 @@ class LiquibaseParserTest {
                         <sqlFile path="indexes.sql" relativeToChangelogFile="true"/>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            dir.resolve("indexes.sql").writeText("""
+			dir.resolve("indexes.sql").writeText(
+				"""
                 --liquibase formatted sql
                 --changeset test:2
                 CREATE INDEX idx_users_city ON users(city);
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("city", result[0].columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("city", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes follows sql include directives`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.sql").writeText("""
+	@Test
+	fun `parseIndexes follows sql include directives`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.sql").writeText(
+				"""
                 --liquibase formatted sql
                 --include file:indexes.sql
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            dir.resolve("indexes.sql").writeText("""
+			dir.resolve("indexes.sql").writeText(
+				"""
                 --liquibase formatted sql
                 --changeset test:3
                 CREATE UNIQUE INDEX idx_users_username ON users(username);
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(1, result.size)
-            assertEquals("username", result[0].columnName)
-            assertTrue(result[0].isUnique)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(1, result.size)
+			assertEquals("username", result[0].columnName)
+			assertTrue(result[0].isUnique)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes handles multiple index types in single changelog`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes handles multiple index types in single changelog`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -536,24 +578,26 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX idx_users_active ON users(active);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(3, result.size)
-            val columns = result.map { it.columnName }.toSet()
-            assertTrue("name" in columns)
-            assertTrue("email" in columns)
-            assertTrue("active" in columns)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(3, result.size)
+			val columns = result.map { it.columnName }.toSet()
+			assertTrue("name" in columns)
+			assertTrue("email" in columns)
+			assertTrue("active" in columns)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes handles SQL with ASC DESC in column list`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes handles SQL with ASC DESC in column list`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -563,22 +607,24 @@ class LiquibaseParserTest {
                         <sql>CREATE INDEX idx_users_time ON users(created_at DESC, name ASC);</sql>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            assertEquals(2, result.size)
-            assertEquals("created_at", result[0].columnName)
-            assertEquals("name", result[1].columnName)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			assertEquals(2, result.size)
+			assertEquals("created_at", result[0].columnName)
+			assertEquals("name", result[1].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `parseIndexes does not count createTable primaryKey column as unique constraint`() {
-        val dir = createTempDir()
-        try {
-            dir.resolve("changelog.xml").writeText("""
+	@Test
+	fun `parseIndexes does not count createTable primaryKey column as unique constraint`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("changelog.xml").writeText(
+				"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -592,19 +638,17 @@ class LiquibaseParserTest {
                         </createTable>
                     </changeSet>
                 </databaseChangeLog>
-            """.trimIndent())
+            """.trimIndent()
+			)
 
-            val result = LiquibaseParser.parseIndexes(dir)
-            // Primary key should be counted once (from parsePrimaryKeys), and
-            // parseCreateTableUniqueConstraints should skip it because primaryKey="true"
-            val idColumns = result.filter { it.columnName == "id" }
-            assertEquals(1, idColumns.size)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
+			val result = LiquibaseParser.parseIndexes(dir)
+			// Primary key should be counted once (from parsePrimaryKeys), and
+			// parseCreateTableUniqueConstraints should skip it because primaryKey="true"
+			val idColumns = result.filter { it.columnName == "id" }
+			assertEquals(1, idColumns.size)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
 
-    private fun createTempDir(prefix: String = "liquibase-test"): File {
-        return kotlin.io.path.createTempDirectory(prefix).toFile()
-    }
 }

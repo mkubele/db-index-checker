@@ -9,49 +9,49 @@ import kotlin.test.assertTrue
 
 class DbIndexCheckerPluginFunctionalTest {
 
-    @Test
-    fun `dbIndexCheck supports write-baseline option`() {
-        val projectDir = Files.createTempDirectory("db-index-checker-functional").toFile()
-        try {
-            projectDir.resolve("settings.gradle.kts").writeText(
-                """
+	@Test
+	fun `dbIndexCheck supports write-baseline option`() {
+		val projectDir = Files.createTempDirectory("db-index-checker-functional").toFile()
+		try {
+			projectDir.resolve("settings.gradle.kts").writeText(
+				"""
                 rootProject.name = "test-project"
                 """.trimIndent()
-            )
-            projectDir.resolve("build.gradle.kts").writeText(
-                """
+			)
+			projectDir.resolve("build.gradle.kts").writeText(
+				"""
                 plugins {
                     id("ee.kubele.db-index-checker")
                 }
                 """.trimIndent()
-            )
+			)
 
-            val result = GradleRunner.create()
-                .withProjectDir(projectDir)
-                .withPluginClasspath()
-                .withArguments("dbIndexCheck", "--write-baseline")
-                .build()
+			val result = GradleRunner.create()
+				.withProjectDir(projectDir)
+				.withPluginClasspath()
+				.withArguments("dbIndexCheck", "--write-baseline")
+				.build()
 
-            assertEquals(TaskOutcome.SUCCESS, result.task(":dbIndexCheck")?.outcome)
-            assertTrue(projectDir.resolve("db-index-checker-baseline.json").exists())
-            assertTrue(projectDir.resolve("build/reports/index-check/missing-indexes.html").exists())
-            assertTrue(projectDir.resolve("build/reports/index-check/missing-indexes.json").exists())
-        } finally {
-            projectDir.deleteRecursively()
-        }
-    }
+			assertEquals(TaskOutcome.SUCCESS, result.task(":dbIndexCheck")?.outcome)
+			assertTrue(projectDir.resolve("db-index-checker-baseline.json").exists())
+			assertTrue(projectDir.resolve("build/reports/index-check/missing-indexes.html").exists())
+			assertTrue(projectDir.resolve("build/reports/index-check/missing-indexes.json").exists())
+		} finally {
+			projectDir.deleteRecursively()
+		}
+	}
 
-    @Test
-    fun `check task runs dbIndexCheck automatically`() {
-        val projectDir = Files.createTempDirectory("db-index-checker-functional").toFile()
-        try {
-            projectDir.resolve("settings.gradle.kts").writeText(
-                """
+	@Test
+	fun `check task runs dbIndexCheck automatically`() {
+		val projectDir = Files.createTempDirectory("db-index-checker-functional").toFile()
+		try {
+			projectDir.resolve("settings.gradle.kts").writeText(
+				"""
                 rootProject.name = "test-project"
                 """.trimIndent()
-            )
-            projectDir.resolve("build.gradle.kts").writeText(
-                """
+			)
+			projectDir.resolve("build.gradle.kts").writeText(
+				"""
                 plugins {
                     id("ee.kubele.db-index-checker")
                     kotlin("jvm") version "2.3.10"
@@ -61,18 +61,18 @@ class DbIndexCheckerPluginFunctionalTest {
                     mavenCentral()
                 }
                 """.trimIndent()
-            )
+			)
 
-            val result = GradleRunner.create()
-                .withProjectDir(projectDir)
-                .withPluginClasspath()
-                .withArguments("check")
-                .build()
+			val result = GradleRunner.create()
+				.withProjectDir(projectDir)
+				.withPluginClasspath()
+				.withArguments("check")
+				.build()
 
-            assertEquals(TaskOutcome.SUCCESS, result.task(":dbIndexCheck")?.outcome)
-            assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
-        } finally {
-            projectDir.deleteRecursively()
-        }
-    }
+			assertEquals(TaskOutcome.SUCCESS, result.task(":dbIndexCheck")?.outcome)
+			assertEquals(TaskOutcome.SUCCESS, result.task(":check")?.outcome)
+		} finally {
+			projectDir.deleteRecursively()
+		}
+	}
 }

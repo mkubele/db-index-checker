@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # required for git describe to resolve the tag
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew build
+      - name: Publish to Gradle Plugin Portal
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+        run: |
+          ./gradlew publishPlugins \
+            -Pgradle.publish.key="$GRADLE_PUBLISH_KEY" \
+            -Pgradle.publish.secret="$GRADLE_PUBLISH_SECRET"

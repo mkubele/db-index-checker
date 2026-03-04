@@ -4,7 +4,13 @@ plugins {
 }
 
 group = "ee.kubele.gradle"
-version = "1.0.0"
+version = try {
+    providers.exec {
+        commandLine("git", "describe", "--tags", "--exact-match", "--match", "v*")
+    }.standardOutput.asText.get().trim().removePrefix("v").ifEmpty { "0.0.0-SNAPSHOT" }
+} catch (_: Exception) {
+    "0.0.0-SNAPSHOT"
+}
 
 repositories {
     mavenCentral()

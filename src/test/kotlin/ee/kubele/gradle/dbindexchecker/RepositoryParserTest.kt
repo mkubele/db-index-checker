@@ -34,7 +34,7 @@ class RepositoryParserTest {
 
     @Test
     fun `parseRepositories returns empty list for file without repository`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("NotARepo.kt").writeText("""
                 package com.example
@@ -51,7 +51,7 @@ class RepositoryParserTest {
 
     @Test
     fun `parseRepositories returns empty when entity not in mappings`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("OrderRepo.kt").writeText("""
                 package com.example
@@ -70,7 +70,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - simple findBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -90,7 +90,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - findBy with mapped column name`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -108,7 +108,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - findBy with And`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -128,7 +128,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - existsBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -146,7 +146,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - countBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -164,7 +164,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - deleteBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -182,7 +182,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - with condition suffix IsNull`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -200,7 +200,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - with OrderBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -220,7 +220,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - findFirstBy`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -238,7 +238,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - non-derived method is ignored`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -256,7 +256,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - with Between suffix`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -274,7 +274,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - with In suffix`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -294,7 +294,7 @@ class RepositoryParserTest {
 
     @Test
     fun `JPQL query - simple WHERE clause`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -314,7 +314,7 @@ class RepositoryParserTest {
 
     @Test
     fun `JPQL query - multiple fields in WHERE`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -335,7 +335,7 @@ class RepositoryParserTest {
 
     @Test
     fun `JPQL query - triple quoted string`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -354,7 +354,7 @@ class RepositoryParserTest {
 
     @Test
     fun `JPQL query - method preceded by Query should not generate derived query results`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -375,7 +375,7 @@ class RepositoryParserTest {
 
     @Test
     fun `native SQL query - simple WHERE clause`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -395,7 +395,7 @@ class RepositoryParserTest {
 
     @Test
     fun `native SQL query - multiple WHERE conditions`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -415,7 +415,7 @@ class RepositoryParserTest {
 
     @Test
     fun `native SQL query - with ORDER BY`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -435,7 +435,7 @@ class RepositoryParserTest {
 
     @Test
     fun `native SQL query - with JOIN ON only reports entity table columns`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -460,7 +460,7 @@ class RepositoryParserTest {
 
     @Test
     fun `multiple query types in same repository`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -485,7 +485,7 @@ class RepositoryParserTest {
 
     @Test
     fun `JpaRepository is detected`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -503,7 +503,7 @@ class RepositoryParserTest {
 
     @Test
     fun `PagingAndSortingRepository is detected`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -521,7 +521,7 @@ class RepositoryParserTest {
 
     @Test
     fun `parseRepositories walks subdirectories`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             val subDir = dir.resolve("sub")
             subDir.mkdirs()
@@ -540,7 +540,7 @@ class RepositoryParserTest {
 
     @Test
     fun `derived query - with Or separator`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -562,7 +562,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck suppresses all columns from derived query`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -580,7 +580,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck with specific columns suppresses only those columns`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -599,7 +599,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck with multiple specific columns`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -618,7 +618,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck only affects the next method`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -639,7 +639,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck works with JPQL query`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -658,7 +658,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck works with native SQL query`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -677,7 +677,7 @@ class RepositoryParserTest {
 
     @Test
     fun `SuppressIndexCheck with specific columns works with native SQL query`() {
-        val dir = createTempDir("repo-test")
+        val dir = createTempDir()
         try {
             dir.resolve("UserRepo.kt").writeText("""
                 package com.example
@@ -695,7 +695,102 @@ class RepositoryParserTest {
         }
     }
 
-    private fun createTempDir(prefix: String): File {
+    @Test
+    fun `parseRepositories detects derived query in CoroutineCrudRepository`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CoroutineCrudRepository<User, UUID> {
+                    fun findAllByName(name: String): Flow<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("name", result[0].columnName)
+            assertEquals(QueryType.DERIVED_QUERY, result[0].queryType)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseRepositories detects derived query in R2dbcRepository`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : R2dbcRepository<User, UUID> {
+                    fun findAllByName(name: String): Flux<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("name", result[0].columnName)
+            assertEquals(QueryType.DERIVED_QUERY, result[0].queryType)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseRepositories detects derived query in ReactiveCrudRepository`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : ReactiveCrudRepository<User, UUID> {
+                    fun findAllByEmail(email: String): Flux<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("email_address", result[0].columnName)
+            assertEquals(QueryType.DERIVED_QUERY, result[0].queryType)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseRepositories detects derived query in ListCrudRepository`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : ListCrudRepository<User, Long> {
+                    fun findAllByActive(active: Boolean): List<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("active", result[0].columnName)
+            assertEquals(QueryType.DERIVED_QUERY, result[0].queryType)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `parseRepositories detects derived query in CoroutineSortingRepository`() {
+        val dir = createTempDir()
+        try {
+            dir.resolve("UserRepo.kt").writeText("""
+                package com.example
+                interface UserRepository : CoroutineSortingRepository<User, UUID> {
+                    fun findAllByActive(active: Boolean): Flow<User>
+                }
+            """.trimIndent())
+            val result = RepositoryParser.parseRepositories(dir, entityMappings)
+            assertEquals(1, result.size)
+            assertEquals("active", result[0].columnName)
+            assertEquals(QueryType.DERIVED_QUERY, result[0].queryType)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    private fun createTempDir(prefix: String = "repo-test"): File {
         return kotlin.io.path.createTempDirectory(prefix).toFile()
     }
 }

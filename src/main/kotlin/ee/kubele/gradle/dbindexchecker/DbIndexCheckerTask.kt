@@ -113,7 +113,7 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 			// Single-module project: scan the root itself
 			logger.lifecycle("Index Checker: Scanning single-module project...")
 			val missing = checkModule(rootDir.name, rootDir)
-			finish(missing, rootDir)
+			finish(missing, setOf(rootDir.name), rootDir)
 			return
 		}
 
@@ -129,10 +129,10 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 			}
 		}
 
-		finish(allMissing, rootDir)
+		finish(allMissing, resolvedServiceNames.toSet(), rootDir)
 	}
 
-	private fun finish(allMissing: List<MissingIndex>, rootDir: File) {
+	private fun finish(allMissing: List<MissingIndex>, checkedServices: Set<String>, rootDir: File) {
 		val baselineFile = resolveBaselineFile(rootDir)
 		val shouldWriteBaseline = writeBaseline.orNull == true
 
@@ -152,7 +152,8 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 			return
 		}
 
-		val baselineIssues = BaselineManager.readBaseline(baselineFile)
+		val allBaselineIssues = BaselineManager.readBaseline(baselineFile)
+		val baselineIssues = allBaselineIssues.filter { it.serviceName.lowercase() in checkedServices.map { s -> s.lowercase() } }
 		val comparison = BaselineManager.compare(allMissing, baselineIssues)
 		ReportGenerator.generate(
 			comparison,

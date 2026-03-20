@@ -153,7 +153,11 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 		}
 
 		val allBaselineIssues = BaselineManager.readBaseline(baselineFile)
-		val baselineIssues = allBaselineIssues.filter { it.serviceName.lowercase() in checkedServices.map { s -> s.lowercase() } }
+		val baselineIssues = if (checkedServices.size == 1) {
+			allBaselineIssues
+		} else {
+			allBaselineIssues.filter { it.serviceName.lowercase() in checkedServices.map { s -> s.lowercase() } }
+		}
 		val comparison = BaselineManager.compare(allMissing, baselineIssues)
 		ReportGenerator.generate(
 			comparison,

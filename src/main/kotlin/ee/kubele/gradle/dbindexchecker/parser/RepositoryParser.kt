@@ -97,9 +97,9 @@ object RepositoryParser {
 			while (i < lines.size) {
 				val line = lines[i]
 
-				// Check for @SuppressIndexCheck comment
+				// Check for @SuppressIndexCheck annotation
 				val suppressMatch = SUPPRESS_INDEX_CHECK_REGEX.find(line)
-				if (suppressMatch != null && line.trimStart().startsWith("//")) {
+				if (suppressMatch != null && line.trimStart().startsWith("@SuppressIndexCheck")) {
 					val columnsArg = suppressMatch.groupValues[1].trim()
 					pendingSuppression = if (columnsArg.isEmpty()) {
 						emptySet()

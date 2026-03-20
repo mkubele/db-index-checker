@@ -622,7 +622,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck
+                    @SuppressIndexCheck
                     fun findByNameAndEmail(name: String, email: String): List<User>
                 }
             """.trimIndent()
@@ -642,7 +642,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck("name")
+                    @SuppressIndexCheck("name")
                     fun findByNameAndEmail(name: String, email: String): List<User>
                 }
             """.trimIndent()
@@ -663,7 +663,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck("name", "email_address")
+                    @SuppressIndexCheck("name", "email_address")
                     fun findByNameAndEmailAndActive(name: String, email: String, active: Boolean): List<User>
                 }
             """.trimIndent()
@@ -684,7 +684,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck
+                    @SuppressIndexCheck
                     fun findByName(name: String): List<User>
 
                     fun findByEmail(email: String): List<User>
@@ -707,7 +707,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck
+                    @SuppressIndexCheck
                     @Query("SELECT u FROM User u WHERE u.name = :name")
                     fun findUserByName(name: String): List<User>
                 }
@@ -728,7 +728,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck
+                    @SuppressIndexCheck
                     @Query("SELECT * FROM users WHERE name = :name", nativeQuery = true)
                     fun findUserByName(name: String): List<User>
                 }
@@ -749,7 +749,7 @@ class RepositoryParserTest : TestBase() {
 				"""
                 package com.example
                 interface UserRepository : CrudRepository<User, Long> {
-                    // @SuppressIndexCheck("name")
+                    @SuppressIndexCheck("name")
                     @Query("SELECT * FROM users WHERE name = :name AND active = true", nativeQuery = true)
                     fun findActiveUserByName(name: String): List<User>
                 }

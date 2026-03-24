@@ -43,6 +43,22 @@ dependencies {
 	testImplementation(kotlin("test"))
 }
 
+val generateVersionProperties by tasks.registering {
+	val outputDir = layout.buildDirectory.dir("generated/resources/version")
+	val pluginVersion = project.version.toString()
+	inputs.property("version", pluginVersion)
+	outputs.dir(outputDir)
+	doLast {
+		val file = outputDir.get().file("db-index-checker-version.properties").asFile
+		file.parentFile.mkdirs()
+		file.writeText("version=$pluginVersion\n")
+	}
+}
+
+sourceSets.main {
+	resources.srcDir(generateVersionProperties.map { it.outputs.files.singleFile })
+}
+
 tasks.test {
 	useJUnitPlatform()
 }

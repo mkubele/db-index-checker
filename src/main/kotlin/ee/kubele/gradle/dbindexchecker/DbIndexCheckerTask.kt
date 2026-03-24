@@ -103,6 +103,12 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 
 	@TaskAction
 	fun check() {
+		val pluginVersion = javaClass.classLoader
+			.getResourceAsStream("db-index-checker-version.properties")
+			?.bufferedReader()?.use { it.readText().substringAfter("=").trim() }
+			?: "unknown"
+		logger.lifecycle("Index Checker v$pluginVersion")
+
 		val rootDir = rootProjectDir.get().asFile
 		val resolvedServiceNames = serviceNames.get().ifEmpty { discoverModules(rootDir) }
 

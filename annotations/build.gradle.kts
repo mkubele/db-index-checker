@@ -1,7 +1,6 @@
 plugins {
 	kotlin("jvm") version "2.3.10"
-	`maven-publish`
-	signing
+	id("com.vanniktech.maven.publish") version "0.32.0"
 }
 
 group = "ee.kubele.gradle"
@@ -15,61 +14,32 @@ kotlin {
 	jvmToolchain(21)
 }
 
-java {
-	withSourcesJar()
-	withJavadocJar()
-}
+mavenPublishing {
+	publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+	signAllPublications()
 
-publishing {
-	publications {
-		create<MavenPublication>("maven") {
-			artifactId = "db-index-checker-annotations"
-			from(components["java"])
+	coordinates(group.toString(), "db-index-checker-annotations", version.toString())
 
-			pom {
-				name.set("DB Index Checker Annotations")
-				description.set("Annotations for the db-index-checker Gradle plugin")
-				url.set("https://github.com/mkubele/db-index-checker")
-				licenses {
-					license {
-						name.set("The Apache License, Version 2.0")
-						url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-					}
-				}
-				developers {
-					developer {
-						id.set("mkubele")
-						name.set("Michal Kubele")
-					}
-				}
-				scm {
-					connection.set("scm:git:git://github.com/mkubele/db-index-checker.git")
-					developerConnection.set("scm:git:ssh://github.com/mkubele/db-index-checker.git")
-					url.set("https://github.com/mkubele/db-index-checker")
-				}
+	pom {
+		name.set("DB Index Checker Annotations")
+		description.set("Annotations for the db-index-checker Gradle plugin")
+		url.set("https://github.com/mkubele/db-index-checker")
+		licenses {
+			license {
+				name.set("The Apache License, Version 2.0")
+				url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
 			}
 		}
-	}
-	repositories {
-		maven {
-			name = "central"
-			url = uri("https://central.sonatype.com/api/v1/publisher/deployments/download/")
-			credentials {
-				username = providers.gradleProperty("sonatypeUsername").orNull
-					?: System.getenv("SONATYPE_USERNAME") ?: ""
-				password = providers.gradleProperty("sonatypePassword").orNull
-					?: System.getenv("SONATYPE_PASSWORD") ?: ""
+		developers {
+			developer {
+				id.set("mkubele")
+				name.set("Michal Kubele")
 			}
 		}
+		scm {
+			connection.set("scm:git:git://github.com/mkubele/db-index-checker.git")
+			developerConnection.set("scm:git:ssh://github.com/mkubele/db-index-checker.git")
+			url.set("https://github.com/mkubele/db-index-checker")
+		}
 	}
-}
-
-signing {
-	val signingKey = providers.gradleProperty("signing.key").orNull ?: System.getenv("GPG_SIGNING_KEY")
-	val signingPassword = providers.gradleProperty("signing.password").orNull ?: System.getenv("GPG_SIGNING_PASSWORD")
-	if (signingKey != null && signingPassword != null) {
-		useInMemoryPgpKeys(signingKey, signingPassword)
-	}
-	sign(publishing.publications["maven"])
-	isRequired = signingKey != null
 }

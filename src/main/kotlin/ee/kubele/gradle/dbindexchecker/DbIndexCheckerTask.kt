@@ -152,7 +152,7 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 			return
 		}
 
-		val allBaselineIssues = BaselineManager.readBaseline(baselineFile)
+		val allBaselineIssues = BaselineManager.readBaseline(baselineFile) { msg -> logger.lifecycle("Index Checker: $msg") }
 		logger.lifecycle("Index Checker: Baseline file: ${baselineFile.absolutePath} (exists=${baselineFile.exists()}, issues=${allBaselineIssues.size})")
 		val baselineIssues = if (checkedServices.size == 1) {
 			allBaselineIssues

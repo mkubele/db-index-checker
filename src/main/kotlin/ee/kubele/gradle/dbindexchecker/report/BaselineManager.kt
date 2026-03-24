@@ -58,14 +58,11 @@ object BaselineManager {
 		})
 	}
 
-	fun readBaseline(file: File, logger: ((String) -> Unit)? = null): List<BaselineIssue> {
+	fun readBaseline(file: File): List<BaselineIssue> {
 		if (!file.exists()) return emptyList()
 		val content = file.readText()
-		logger?.invoke("Baseline content: size=${content.length}, first200=${content.take(200).replace("\n", "\\n")}")
 		val objectPattern =
 			Regex("\\{\\s*\"service\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"\\s*,\\s*\"table\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"\\s*,\\s*\"column\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"\\s*}")
-		val matchCount = objectPattern.findAll(content).count()
-		logger?.invoke("Baseline regex matches: $matchCount")
 
 		return objectPattern.findAll(content)
 			.map { match ->

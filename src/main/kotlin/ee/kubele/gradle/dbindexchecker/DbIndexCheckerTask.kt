@@ -16,7 +16,6 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -28,7 +27,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import java.io.File
 
-@CacheableTask
 abstract class DbIndexCheckerTask : DefaultTask() {
 
 	@get:Input
@@ -92,7 +90,6 @@ abstract class DbIndexCheckerTask : DefaultTask() {
 
 	init {
 		writeBaseline.convention(false)
-		outputs.cacheIf { !writeBaseline.get() }
 	}
 
 	@Suppress("unused")

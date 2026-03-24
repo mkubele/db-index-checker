@@ -26,3 +26,10 @@ jobs:
           ./gradlew publishPlugins \
             -Pgradle.publish.key="$GRADLE_PUBLISH_KEY" \
             -Pgradle.publish.secret="$GRADLE_PUBLISH_SECRET"
+      - name: Publish annotations to Maven Central
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+        run: ./gradlew :annotations:publishMavenPublicationToCentralRepository

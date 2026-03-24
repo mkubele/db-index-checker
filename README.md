@@ -74,13 +74,35 @@ When baseline exists, report output is split into `new`, `existing`, and `resolv
 
 ### In source code
 
-Add `@SuppressIndexCheck` in a comment above a repository method to suppress its findings:
+Add the `@SuppressIndexCheck` annotation to a repository method to suppress its findings. Add the annotations artifact as a `compileOnly` dependency:
+
+```kotlin
+dependencies {
+    compileOnly("ee.kubele.gradle:db-index-checker-annotations:<version>")
+}
+```
+
+Then use it in your repository interfaces:
+
+```kotlin
+import ee.kubele.gradle.dbindexchecker.SuppressIndexCheck
+
+@SuppressIndexCheck
+fun findByStatus(status: String): List<User>
+
+@SuppressIndexCheck("status", "email_address")  // suppress specific columns only
+fun findByStatusAndEmailAndName(status: String, email: String, name: String): List<User>
+```
+
+The annotation has `SOURCE` retention — it adds zero runtime overhead.
+
+Alternatively, you can use `@SuppressIndexCheck` in a comment (no dependency needed):
 
 ```kotlin
 // @SuppressIndexCheck
 fun findByStatus(status: String): List<User>
 
-// @SuppressIndexCheck("status", "email_address")  — suppress specific columns only
+// @SuppressIndexCheck("status", "email_address")
 fun findByStatusAndEmailAndName(status: String, email: String, name: String): List<User>
 ```
 

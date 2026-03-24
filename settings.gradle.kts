@@ -11,3 +11,5 @@ develocity {
 }
 
 rootProject.name = "db-index-checker"
+
+include("annotations")

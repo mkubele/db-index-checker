@@ -342,6 +342,115 @@ class DbIndexCheckerTest {
 	}
 
 	@Test
+	fun `findMissingIndexes considers composite index columns covered when query uses left prefix`() {
+		val queryColumns = listOf(
+			QueryColumn(
+				tableName = "recipes",
+				columnName = "valid_from",
+				source = "findValid",
+				filePath = "/test/RecipeRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.JPQL
+			),
+			QueryColumn(
+				tableName = "recipes",
+				columnName = "valid_to",
+				source = "findValid",
+				filePath = "/test/RecipeRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.JPQL
+			)
+		)
+
+		val indexedColumns = listOf(
+			IndexedColumn(
+				tableName = "recipes",
+				columnName = "valid_from",
+				indexName = "idx_recipes_valid_from_to",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 0
+			),
+			IndexedColumn(
+				tableName = "recipes",
+				columnName = "valid_to",
+				indexName = "idx_recipes_valid_from_to",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 1
+			)
+		)
+
+		val result = DbIndexChecker.findMissingIndexes(
+			serviceName = "test-service",
+			queryColumns = queryColumns,
+			indexedColumns = indexedColumns,
+			excludeTables = emptySet(),
+			excludeColumns = emptySet()
+		)
+
+		// Both columns form a left prefix of the composite index, so both are covered
+		assertTrue(result.isEmpty())
+	}
+
+	@Test
+	fun `findMissingIndexes does not cover composite position 2 when query skips position 1`() {
+		val queryColumns = listOf(
+			QueryColumn(
+				tableName = "users",
+				columnName = "name",
+				source = "findByNameAndAge",
+				filePath = "/test/UserRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.DERIVED_QUERY
+			),
+			QueryColumn(
+				tableName = "users",
+				columnName = "age",
+				source = "findByNameAndAge",
+				filePath = "/test/UserRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.DERIVED_QUERY
+			)
+		)
+
+		val indexedColumns = listOf(
+			IndexedColumn(
+				tableName = "users",
+				columnName = "name",
+				indexName = "idx_users_name_email_age",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 0
+			),
+			IndexedColumn(
+				tableName = "users",
+				columnName = "email",
+				indexName = "idx_users_name_email_age",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 1
+			),
+			IndexedColumn(
+				tableName = "users",
+				columnName = "age",
+				indexName = "idx_users_name_email_age",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 2
+			)
+		)
+
+		val result = DbIndexChecker.findMissingIndexes(
+			serviceName = "test-service",
+			queryColumns = queryColumns,
+			indexedColumns = indexedColumns,
+			excludeTables = emptySet(),
+			excludeColumns = emptySet()
+		)
+
+		// name is at position 0 so it's covered, but age at position 2 is not covered
+		// because the query doesn't use email at position 1
+		assertEquals(1, result.size)
+		assertEquals("age", result[0].columnName)
+	}
+
+	@Test
 	fun `findMissingIndexes results are sorted by table then column`() {
 		val queryColumns = listOf(
 			QueryColumn(

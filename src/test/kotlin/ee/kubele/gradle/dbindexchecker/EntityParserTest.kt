@@ -246,18 +246,18 @@ class EntityParserTest : TestBase() {
                 package com.example
 
                 @Entity
-                @Table(name = "al_household_account")
-                class HouseholdAccountEntity {
-                    @OneToMany(mappedBy = "householdAccount", fetch = FetchType.LAZY)
-                    var userProfiles: MutableSet<UserProfileEntity> = mutableSetOf()
+                @Table(name = "departments")
+                class Department {
+                    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+                    var employees: MutableSet<Employee> = mutableSetOf()
                 }
             """.trimIndent()
 			)
 
 			val result = EntityParser.parseEntityFile(file)
 			assertNotNull(result)
-			assertNull(result.fieldToColumn["userProfiles"])
-			assertTrue("userProfiles" in result.excludedRelationshipFields)
+			assertNull(result.fieldToColumn["employees"])
+			assertTrue("employees" in result.excludedRelationshipFields)
 		} finally {
 			file.delete()
 		}

@@ -321,6 +321,34 @@ class RepositoryParserTest : TestBase() {
 	// === JPQL Query Tests ===
 
 	@Test
+	fun `derived query - findByAssociationId resolves to FK column via JoinColumn mapping`() {
+		val orderMapping = TableMapping(
+			entityName = "OrderItem",
+			tableName = "order_items",
+			fieldToColumn = mapOf(
+				"id" to "id",
+				"order" to "order_fk"  // @ManyToOne @JoinColumn(name = "order_fk")
+			)
+		)
+		val dir = createTempDir()
+		try {
+			dir.resolve("OrderItemRepo.kt").writeText(
+				"""
+                package com.example
+                interface OrderItemRepository : CrudRepository<OrderItem, Long> {
+                    fun findByOrderId(id: Long): List<OrderItem>
+                }
+            """.trimIndent()
+			)
+			val result = RepositoryParser.parseRepositories(dir, mapOf("OrderItem" to orderMapping))
+			assertEquals(1, result.size)
+			assertEquals("order_fk", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
+
+	@Test
 	fun `JPQL query - simple WHERE clause`() {
 		val dir = createTempDir()
 		try {
@@ -375,6 +403,27 @@ class RepositoryParserTest : TestBase() {
                 interface UserRepository : CrudRepository<User, Long> {
                     @Query(${"\"\"\""}SELECT u FROM User u WHERE u.active = :active${"\"\"\""})
                     fun findActiveUsers(active: Boolean): List<User>
+                }
+            """.trimIndent()
+			)
+			val result = RepositoryParser.parseRepositories(dir, entityMappings)
+			assertEquals(1, result.size)
+			assertEquals("active", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
+
+	@Test
+	fun `JPQL query - SELECT projected fields are not reported as filter columns`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("UserRepo.kt").writeText(
+				"""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    @Query("SELECT u.name FROM User u WHERE u.active = :active")
+                    fun getNamesByActive(active: Boolean): List<String>
                 }
             """.trimIndent()
 			)

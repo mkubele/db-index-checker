@@ -267,12 +267,21 @@ object RepositoryParser {
 	/**
 	 * Resolves a field name (from derived query, with first letter uppercase) to a column name.
 	 * Returns null for relationship fields that have no DB column (e.g. @OneToMany mappedBy).
+	 * Handles the `*Id` suffix convention: `findByUserProfileId` resolves via the `userProfile`
+	 * association's @JoinColumn rather than falling back to `user_profile_id`.
 	 * Otherwise tries exact match in fieldToColumn map, then falls back to camelToSnake conversion.
 	 */
 	private fun resolveFieldToColumn(fieldName: String, tableMapping: TableMapping): String? {
 		val entityFieldName = fieldName.replaceFirstChar { it.lowercase() }
 		if (entityFieldName in tableMapping.excludedRelationshipFields) return null
-		return tableMapping.fieldToColumn[entityFieldName] ?: EntityParser.camelToSnake(entityFieldName)
+		tableMapping.fieldToColumn[entityFieldName]?.let { return it }
+		// `findByUserProfileId` → entityFieldName = "userProfileId"
+		// Strip trailing "Id" and check if the association field has a @JoinColumn mapping
+		if (entityFieldName.endsWith("Id") && entityFieldName.length > 2) {
+			val associationField = entityFieldName.removeSuffix("Id")
+			tableMapping.fieldToColumn[associationField]?.let { return it }
+		}
+		return EntityParser.camelToSnake(entityFieldName)
 	}
 
 	// ========== @Query Annotation Extraction ==========
@@ -363,10 +372,16 @@ object RepositoryParser {
 
 		if (aliases.isEmpty()) return emptyList()
 
-		// Find alias.field references in WHERE, ON, ORDER BY, and general conditions
+		// Only scan the part of the query after the first WHERE/ON/ORDER BY to avoid
+		// treating SELECT-projected fields as filter columns
+		val filterStart = Regex("""\b(?:WHERE|ON|ORDER\s+BY)\b""", RegexOption.IGNORE_CASE)
+			.find(normalized)?.range?.first ?: return emptyList()
+		val filterPart = normalized.substring(filterStart)
+
+		// Find alias.field references in WHERE, ON, ORDER BY clauses only
 		return aliases.flatMap { alias ->
 			Regex("""(?<!\w)${Regex.escape(alias)}\.(\w+)""")
-				.findAll(normalized)
+				.findAll(filterPart)
 				.map { it.groupValues[1] }
 				.filter { it.lowercase() !in setOf("class", "size") }
 				.map { fieldName ->

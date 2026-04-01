@@ -35,9 +35,10 @@ object DbIndexChecker {
 			.mapValues { (_, cols) -> cols.sortedBy { it.compositePosition }.map { it.columnName.lowercase() } }
 			.entries.groupBy({ it.key.first }, { it.value })
 
-		// Group query columns by source query to detect composite index coverage
+		// Group query columns by (table, file, line) so WHERE and ORDER BY columns from the
+		// same method are in the same set for composite index coverage checks
 		val queryColumnsBySource = queryColumns
-			.groupBy { Triple(it.tableName.lowercase(), it.source, it.filePath) }
+			.groupBy { Triple(it.tableName.lowercase(), it.filePath, it.lineNumber) }
 			.mapValues { (_, cols) -> cols.map { it.columnName.lowercase() }.toSet() }
 
 		// Track seen table+column pairs for deduplication
@@ -46,7 +47,7 @@ object DbIndexChecker {
 		return queryColumns.mapNotNull { qc ->
 			val tableLower = qc.tableName.lowercase()
 			val columnLower = qc.columnName.lowercase()
-			val queryCols = queryColumnsBySource[Triple(tableLower, qc.source, qc.filePath)] ?: emptySet()
+			val queryCols = queryColumnsBySource[Triple(tableLower, qc.filePath, qc.lineNumber)] ?: emptySet()
 
 			when {
 				tableLower in excludeTablesLower -> null

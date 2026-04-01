@@ -649,6 +649,57 @@ class DbIndexCheckerTest {
 	}
 
 	@Test
+	fun `findMissingIndexes ORDER BY column covered by composite index when WHERE column is at position 0`() {
+		// WHERE status (position 0) + ORDER BY created_at (position 1) have different source strings
+		// but same file+line → should be grouped together for composite index coverage
+		val queryColumns = listOf(
+			QueryColumn(
+				tableName = "orders",
+				columnName = "status",
+				source = "derived query: findFirstByStatusOrderByCreatedAtDesc",
+				filePath = "/test/OrderRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.DERIVED_QUERY
+			),
+			QueryColumn(
+				tableName = "orders",
+				columnName = "created_at",
+				source = "derived query ORDER BY: findFirstByStatusOrderByCreatedAtDesc",
+				filePath = "/test/OrderRepo.kt",
+				lineNumber = 10,
+				queryType = QueryType.DERIVED_QUERY
+			)
+		)
+
+		val indexedColumns = listOf(
+			IndexedColumn(
+				tableName = "orders",
+				columnName = "status",
+				indexName = "idx_orders_status_created_at",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 0
+			),
+			IndexedColumn(
+				tableName = "orders",
+				columnName = "created_at",
+				indexName = "idx_orders_status_created_at",
+				filePath = "/liquibase/changelog.xml",
+				compositePosition = 1
+			)
+		)
+
+		val result = DbIndexChecker.findMissingIndexes(
+			serviceName = "test-service",
+			queryColumns = queryColumns,
+			indexedColumns = indexedColumns,
+			excludeTables = emptySet(),
+			excludeColumns = emptySet()
+		)
+
+		assertTrue(result.isEmpty())
+	}
+
+	@Test
 	fun `findMissingIndexes mixed scenario - some indexed some not`() {
 		val queryColumns = listOf(
 			QueryColumn(

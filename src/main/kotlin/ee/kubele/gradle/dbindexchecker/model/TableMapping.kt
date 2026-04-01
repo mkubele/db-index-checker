@@ -6,5 +6,6 @@ package ee.kubele.gradle.dbindexchecker.model
 data class TableMapping(
 	val entityName: String,
 	val tableName: String,
-	val fieldToColumn: Map<String, String>  // entityField -> db_column_name
+	val fieldToColumn: Map<String, String>,  // entityField -> db_column_name
+	val excludedRelationshipFields: Set<String> = emptySet()  // fields with no DB column (e.g. @OneToMany)
 )

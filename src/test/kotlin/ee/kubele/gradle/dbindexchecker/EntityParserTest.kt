@@ -229,6 +229,35 @@ class EntityParserTest : TestBase() {
 			// OneToMany and ManyToMany fields should not be in fieldToColumn
 			assertNull(result.fieldToColumn["orders"])
 			assertNull(result.fieldToColumn["tags"])
+			// They should be tracked as excluded relationship fields
+			assertTrue("orders" in result.excludedRelationshipFields)
+			assertTrue("tags" in result.excludedRelationshipFields)
+		} finally {
+			file.delete()
+		}
+	}
+
+	@Test
+	fun `parseEntityFile tracks mappedBy OneToMany field as excluded relationship field`() {
+		val file = createTempFile()
+		try {
+			file.writeText(
+				"""
+                package com.example
+
+                @Entity
+                @Table(name = "al_household_account")
+                class HouseholdAccountEntity {
+                    @OneToMany(mappedBy = "householdAccount", fetch = FetchType.LAZY)
+                    var userProfiles: MutableSet<UserProfileEntity> = mutableSetOf()
+                }
+            """.trimIndent()
+			)
+
+			val result = EntityParser.parseEntityFile(file)
+			assertNotNull(result)
+			assertNull(result.fieldToColumn["userProfiles"])
+			assertTrue("userProfiles" in result.excludedRelationshipFields)
 		} finally {
 			file.delete()
 		}

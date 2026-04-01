@@ -868,4 +868,29 @@ class RepositoryParserTest : TestBase() {
 		}
 	}
 
+	@Test
+	fun `derived query - findBy on excluded relationship field produces no QueryColumn`() {
+		val orderMapping = TableMapping(
+			entityName = "Order",
+			tableName = "orders",
+			fieldToColumn = mapOf("id" to "id"),
+			excludedRelationshipFields = setOf("items")
+		)
+		val dir = createTempDir()
+		try {
+			dir.resolve("OrderRepo.kt").writeText(
+				"""
+                package com.example
+                interface OrderRepository : CrudRepository<Order, Long> {
+                    fun findByItems(item: Item): Order?
+                }
+            """.trimIndent()
+			)
+			val result = RepositoryParser.parseRepositories(dir, mapOf("Order" to orderMapping))
+			assertTrue(result.isEmpty(), "Expected no QueryColumn for an excluded relationship field, got: $result")
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
+
 }

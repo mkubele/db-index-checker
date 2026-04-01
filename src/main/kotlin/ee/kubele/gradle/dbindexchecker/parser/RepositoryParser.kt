@@ -188,10 +188,11 @@ object RepositoryParser {
 				splitByConditionSeparators(wherePart).forEach { token ->
 					val fieldName = stripConditionSuffixes(token)
 					if (fieldName.isNotEmpty()) {
+						val columnName = resolveFieldToColumn(fieldName, tableMapping) ?: return@forEach
 						add(
 							QueryColumn(
 								tableName = tableMapping.tableName,
-								columnName = resolveFieldToColumn(fieldName, tableMapping),
+								columnName = columnName,
 								source = "derived query: $methodName",
 								filePath = filePath,
 								lineNumber = lineNumber,
@@ -206,10 +207,11 @@ object RepositoryParser {
 			if (!orderByPart.isNullOrEmpty()) {
 				val orderField = orderByPart.removeSuffix("Asc").removeSuffix("Desc")
 				if (orderField.isNotEmpty()) {
+					val columnName = resolveFieldToColumn(orderField, tableMapping) ?: return@buildList
 					add(
 						QueryColumn(
 							tableName = tableMapping.tableName,
-							columnName = resolveFieldToColumn(orderField, tableMapping),
+							columnName = columnName,
 							source = "derived query ORDER BY: $methodName",
 							filePath = filePath,
 							lineNumber = lineNumber,
@@ -264,11 +266,12 @@ object RepositoryParser {
 
 	/**
 	 * Resolves a field name (from derived query, with first letter uppercase) to a column name.
-	 * First tries exact match (with lowercase first letter) in fieldToColumn map,
-	 * then falls back to camelToSnake conversion.
+	 * Returns null for relationship fields that have no DB column (e.g. @OneToMany mappedBy).
+	 * Otherwise tries exact match in fieldToColumn map, then falls back to camelToSnake conversion.
 	 */
-	private fun resolveFieldToColumn(fieldName: String, tableMapping: TableMapping): String {
+	private fun resolveFieldToColumn(fieldName: String, tableMapping: TableMapping): String? {
 		val entityFieldName = fieldName.replaceFirstChar { it.lowercase() }
+		if (entityFieldName in tableMapping.excludedRelationshipFields) return null
 		return tableMapping.fieldToColumn[entityFieldName] ?: EntityParser.camelToSnake(entityFieldName)
 	}
 

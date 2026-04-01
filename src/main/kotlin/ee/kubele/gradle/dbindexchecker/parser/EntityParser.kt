@@ -34,6 +34,7 @@ object EntityParser {
 		val tableName = TABLE_ANNOTATION.find(content)?.groupValues?.get(1) ?: return null
 		val className = CLASS_DECLARATION.find(content)?.groupValues?.get(1) ?: return null
 
+		val excludedRelationshipFields = mutableSetOf<String>()
 		val fieldToColumn = buildMap {
 			put("id", "id")
 
@@ -46,6 +47,7 @@ object EntityParser {
 						line
 					)
 				) {
+					findFieldName(lines, i)?.let { excludedRelationshipFields.add(it) }
 					i++
 					continue
 				}
@@ -70,7 +72,9 @@ object EntityParser {
 				// Check for plain field declarations (no explicit @Column)
 				FIELD_DECLARATION.find(line)?.let { match ->
 					val fieldName = match.groupValues[1]
-					if (!isRelationshipField(lines, i) && fieldName !in this) {
+					if (isRelationshipField(lines, i)) {
+						excludedRelationshipFields.add(fieldName)
+					} else if (fieldName !in this) {
 						put(fieldName, camelToSnake(fieldName))
 					}
 				}
@@ -86,7 +90,8 @@ object EntityParser {
 		return TableMapping(
 			entityName = className,
 			tableName = tableName,
-			fieldToColumn = fieldToColumn
+			fieldToColumn = fieldToColumn,
+			excludedRelationshipFields = excludedRelationshipFields
 		)
 	}
 

@@ -217,6 +217,26 @@ class RepositoryParserTest : TestBase() {
 	}
 
 	@Test
+	fun `derived query - with condition suffix IsAfter`() {
+		val dir = createTempDir()
+		try {
+			dir.resolve("UserRepo.kt").writeText(
+				"""
+                package com.example
+                interface UserRepository : CrudRepository<User, Long> {
+                    fun findByCreatedAtIsAfter(createdAt: OffsetDateTime): List<User>
+                }
+            """.trimIndent()
+			)
+			val result = RepositoryParser.parseRepositories(dir, entityMappings)
+			assertEquals(1, result.size)
+			assertEquals("created_at", result[0].columnName)
+		} finally {
+			dir.deleteRecursively()
+		}
+	}
+
+	@Test
 	fun `derived query - with OrderBy`() {
 		val dir = createTempDir()
 		try {

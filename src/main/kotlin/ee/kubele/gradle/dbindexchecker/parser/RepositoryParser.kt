@@ -41,6 +41,8 @@ object RepositoryParser {
 		"Like",
 		"IgnoreCase",
 		"Between",
+		"IsAfter",
+		"IsBefore",
 		"After",
 		"Before",
 		"NotIn",
